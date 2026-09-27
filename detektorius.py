@@ -62,8 +62,10 @@ DU SCENARIJAI (tiek Mantas ir apibreze)
    Etalonas: ADYEN.AS 08-13 (tarpas +5.7%, diena +10.1%),
              PTX.DE 08-04 (tarpas +16.4%, diena +8.8%).
 
-Scenarijai nepersidengia PAGAL KONSTRUKCIJA: 1 reikalauja iejimo ne auksciau
-kaip vakar_uzd + 0.5*ATR, 2 reikalauja tarpo >= 1.0*ATR. Tai patikrinta teste.
+Scenarijai nepersidengia PAGAL KONSTRUKCIJA: lyginamas ATIDARYMAS, ne iejimas.
+Jei atidarymas - vakar_uzd >= 1.0*ATR, diena valdo 2 scenarijus, ir 1 grazina
+None; kitu atveju atvirksciai. Ribos yra tikslus vienas kito papildiniai, ir
+tai patikrinta savitikroje skenuojant tarpa 0.00..2.00 ATR.
 
 HORIZONTAS
 ----------
@@ -112,6 +114,12 @@ MIN_RR = 1.0                                        # aritmetika
 
 BARAS_MIN = 5
 HORIZONTAS_SESIJU = 3
+# Live rezimui reikia tiek pat 5 min istorijos, kiek kalibracijai: apyv_tipine
+# yra tos pacios minutes mediana per 20 ANKSTESNIU dienu (min_periods=5).
+# Su 5 dienomis po shift(1) lieka 4 stebejimai -> apyv_santykis visada NaN ->
+# abu scenarijai reikalauja np.isfinite(sant) -> live NIEKADA neduoda signalo.
+# Patikrinta 2026-09-27: dienos=5 -> 390/390 NaN.
+LIVE_DIENOS = 30
 BUSENOS_FAILAS = "busena.json"
 DIVIDENDU_TALPYKLA = "dividendai.json"
 
@@ -292,7 +300,11 @@ def sesijos_rodikliai(barai, rinka):
     d = barai.copy()
     try:
         idx = d.index.tz_convert(RINKOS[rinka]["tz"])
-    except Exception:
+    except Exception as e:
+        # Anksciau cia buvo tylus nukritimas i UTC: "minute" tapdavo UTC
+        # minutemis, ir pjuvis "pagal iejimo valanda" rodydavo ne ta laika.
+        print(f"  DEMESIO: laiko juostos konversija nepavyko ({e}) - "
+              f"minutes bus UTC, ne {RINKOS[rinka]['tz']}")
         idx = d.index
     d["sesija"] = [x.date() for x in idx]
     d["minute"] = [x.hour * 60 + x.minute for x in idx]
@@ -438,12 +450,19 @@ def scenarijus_2(langas, kd):
     return sig
 
 
+_KLAIDOS = {}
+
+
 def aptikti(langas, kd):
+    """Klaidos nebetylimos: anksciau `except: s = None` prarydavo VISKA, tad
+    toks gedimas kaip visur-NaN apyv_santykis atrodydavo kaip "signalu nera"."""
     rez = []
     for f in (scenarijus_1, scenarijus_2):
         try:
             s = f(langas, kd)
-        except Exception:
+        except Exception as e:
+            raktas = f"{f.__name__}: {type(e).__name__}: {e}"
+            _KLAIDOS[raktas] = _KLAIDOS.get(raktas, 0) + 1
             s = None
         if s:
             s["tinkamas"] = len(s["kliutys"]) == 0
@@ -466,13 +485,32 @@ def baigtis(toliau, sig):
     ieina, tikslas, stop = sig["ieina"], sig.get("tikslas"), sig["stop"]
     atr = sig["atr_abs"]
     if len(toliau) == 0:
-        return dict(baigtis="nespejo", pelnas_pct=0.0, minuciu=0,
+        # Buvo atskira baigtis "nespejo", del kurios trys ataskaitos procentai
+        # nebesusidedavo i 100. Tai ta pati "laikas baigesi" baigtis.
+        return dict(baigtis="laikas", pelnas_pct=0.0, minuciu=0,
                     mfe_pct=0.0, mae_pct=0.0, mfe_min=0, laikas_baige=True,
                     isejo_bare=1)
 
     auksciausia, mfe, mae, mfe_i = ieina, 0.0, 0.0, 0
     for j, (_, b) in enumerate(toliau.iterrows()):
-        lo, hi = float(b["Low"]), float(b["High"])
+        lo, hi, op = float(b["Low"]), float(b["High"]), float(b["Open"])
+
+        # 1) ATIDARYMAS ivyksta pirmas - pries viska kita bare. Pozicija
+        # nesama per nakti, tad baras gali atidaryti jau anapus stop'o arba
+        # anapus tikslo, ir tada vykdymas yra ties atidarymu. Be sios tvarkos
+        # baras O=115 (virs tikslo 110) su veliau L=95 buvo uzskaitomas kaip
+        # stop -2%, nors pozicijos tuo metu jau seniai nebuvo.
+        if op <= stop:
+            return dict(baigtis="stop", pelnas_pct=(op / ieina - 1) * 100,
+                        minuciu=(j + 1) * BARAS_MIN, mfe_pct=mfe, mae_pct=mae,
+                        mfe_min=mfe_i * BARAS_MIN, laikas_baige=False,
+                        isejo_bare=j + 1)
+        if tikslas and op >= tikslas:
+            return dict(baigtis="tikslas", pelnas_pct=(op / ieina - 1) * 100,
+                        minuciu=(j + 1) * BARAS_MIN, mfe_pct=mfe, mae_pct=mae,
+                        mfe_min=mfe_i * BARAS_MIN, laikas_baige=False,
+                        isejo_bare=j + 1)
+
         if (lo / ieina - 1) * 100 < mae:
             mae = (lo / ieina - 1) * 100
         if (hi / ieina - 1) * 100 > mfe:
@@ -480,6 +518,12 @@ def baigtis(toliau, sig):
 
         # stop'as tikrinamas PIRMAS: kai baro diapazonas apima ir stop'a, ir
         # tiksla, laikom, kad issimuse. Konservatyvu ir tycia.
+        #
+        # TARPAS: pozicija nesama per nakti, tad baras gali ATIDARYTI gerokai
+        # zemiau stop'o. Tada vykdymas yra ties atidarymu, ne ties stop'u.
+        # Be sito kodas blogiausius sandorius vertino per gerai: O=90 prie
+        # stop'o 98 buvo uzskaitoma kaip -2.00%, nors realiai -10.00%
+        # (18 000 EUR pozicijai tai 1 440 EUR paklaida vienam sandoriui).
         if lo <= stop:
             return dict(baigtis="stop", pelnas_pct=(stop / ieina - 1) * 100,
                         minuciu=(j + 1) * BARAS_MIN, mfe_pct=mfe, mae_pct=mae,
@@ -490,7 +534,12 @@ def baigtis(toliau, sig):
                         minuciu=(j + 1) * BARAS_MIN, mfe_pct=mfe, mae_pct=mae,
                         mfe_min=mfe_i * BARAS_MIN, laikas_baige=False,
                         isejo_bare=j + 1)
-        if hi > auksciausia:                       # slenkantis stop'as ATR vienetais
+        # Slenkantis stop'as TIK 2 scenarijui: jis neturi tikslo, ir kortele
+        # ji deklaruoja. 1 scenarijus kortelėje rodo FIKSUOTA stop'a, ir pagal
+        # ji skaiciuojamas R:R bei rizika eurais - tad jo slinkimas reikstu,
+        # kad matuojam ne ta taisykle, kuria rodom. (Patikrinta: su slinkimu
+        # 13% baigciu skirdavosi, ir jos patekdavo i "stop" stulpeli.)
+        if sig.get("tipas") == 2 and hi > auksciausia:
             auksciausia = hi
             stop = max(stop, auksciausia - S2_TRAIL_ATR * atr)
 
@@ -525,8 +574,12 @@ def issaugoti_busena(b):
 
 def parsisiusti(rinka, dienos):
     tick = universas(rinka)
+    # actions=True atsiunčia ir Dividends stulpeli TOJE PACIOJE uzklausoje -
+    # be jo dividendu pataisa buvo negyvas kodas (div_lange visada 0.0), nes
+    # parsisiusti() kviete dienos_rodikliai(d) be dividendu argumento.
     dien = yf.download(tick, period="2y", interval="1d", auto_adjust=False,
-                       progress=False, group_by="ticker", threads=True)
+                       progress=False, group_by="ticker", threads=True,
+                       actions=True)
     intr = yf.download(tick, period=f"{min(dienos, 60)}d", interval="5m",
                        auto_adjust=False, progress=False, group_by="ticker",
                        threads=True, prepost=False)
@@ -535,7 +588,7 @@ def parsisiusti(rinka, dienos):
         d = _vienas(dien, t)
         if d is None or len(d) < 60:
             continue
-        r = dienos_rodikliai(d)
+        r = dienos_rodikliai(d, d["Dividends"] if "Dividends" in d else None)
         if r is None:
             continue
         b = _vienas(intr, t)
@@ -544,6 +597,17 @@ def parsisiusti(rinka, dienos):
         rod[t] = r
         barai[t] = sesijos_rodikliai(b, rinka)
     print(f"  akciju su duomenimis: {len(barai)}")
+
+    # Garsi patikra: jei apyv_santykis visur NaN, scenarijai negali suveikti
+    # is principo, ir tyliai gautume tuscia puslapi. 2026-09-27 butent taip
+    # ir buvo live rezime.
+    if barai:
+        nan = [b["apyv_santykis"].isna().all() for b in barai.values()]
+        if all(nan):
+            sys.exit(f"NUTRAUKTA: apyv_santykis visur NaN ({dienos} d. per mazai "
+                     f"apyv_tipine skaiciavimui - reikia bent 6, realiai 30).")
+        if sum(nan) > len(nan) * 0.5:
+            print(f"  DEMESIO: {sum(nan)}/{len(nan)} akciju apyv_santykis visur NaN")
     return rod, barai
 
 
@@ -554,8 +618,14 @@ def _kd(rod_t, ses):
         if not len(eil):
             return None
         r = eil.iloc[0]
-        if not np.isfinite(r["atr_abs"]) or not np.isfinite(r["virsune_n"]):
-            return None
+        # Visi laukai, kuriais remiasi scenarijai ir 1 pakopos filtrai, turi
+        # buti skaiciai. Anksciau buvo tikrinami tik atr_abs ir virsune_n, tad
+        # NaN apyvarta TYLIAI praeidavo pro likvidumo riba (vienintele tikra
+        # 1 pakopos salyga), o NaN uzd_vieta - pro kapituliacijos salyga.
+        for f in ("atr_abs", "virsune_n", "dugnas_n", "uzdarymas",
+                  "apyvarta", "uzd_vieta"):
+            if not np.isfinite(r[f]):
+                return None
         return r
     except Exception:
         return None
@@ -563,17 +633,40 @@ def _kd(rod_t, ses):
 
 # ================================================================ live
 
+def atkurti(s, sena, kd, kaina):
+    """Atstato signala is busenos ir PERSKAICIUOJA viska, kas nuo jos priklauso.
+
+    Kortele turi rodyti viena nuosekliai suderinta trijule: ieina, stop,
+    tikslas. Anksciau buvo atstatomi tik ieina ir stop, o tikslas likdavo
+    perskaiciuotas nuo DABARTINES kainos (tikslas = min(R_pilnas, kaina+3*ATR)),
+    todel rodomas R:R augdavo 2.60 -> 4.70 vien del to, kad kaina kyla, nors
+    nei iejimas, nei stop'as nepasikeite. Ir dar anksciau _bendra() apskritai
+    nebuvo perskaiciuojama, tad rizika eurais rodyta 1396 vietoj 476.
+    """
+    s["ieina"] = sena["ieina"]
+    s["stop"] = sena.get("stop", s["stop"])
+    if sena.get("R"):
+        s["R"] = s["tikslas"] = sena["R"]
+    s["pirmas_kartas"] = sena["laikas"]
+    s["kliutys"] = _bendra(s, kd)
+    s["tinkamas"] = len(s["kliutys"]) == 0
+    L = sena["L"]
+    if s.get("R") and s["R"] > L:
+        s["progresas"] = min(1.0, max(0.0, (kaina - L) / (s["R"] - L)))
+    return s
+
+
 def paleisti_live(rinkos):
     busena = ikelti_busena()
     eilutes = []
     for rinka in rinkos:
         zyme = RINKOS[rinka]["zyme"]
-        rod, barai = parsisiusti(rinka, 5)
+        rod, barai = parsisiusti(rinka, LIVE_DIENOS)
         div = dividendu_kalendorius(list(barai))
         for t, d in barai.items():
             ses = d["sesija"].iloc[-1]
             sesija = d[d["sesija"] == ses]
-            if len(sesija) < S2_ORB_BARU + 2:
+            if len(sesija) < S2_ORB_BARU + 4:
                 continue
             kd = _kd(rod[t], ses)
             if kd is None:
@@ -583,14 +676,9 @@ def paleisti_live(rinkos):
                 dabar = str(d.index[-1])
                 sena = busena.get(raktas)
                 if sena:
-                    s["ieina"] = sena["ieina"]
-                    s["pirmas_kartas"] = sena["laikas"]
-                    if s.get("R") and s["R"] > sena["L"]:
-                        s["progresas"] = min(1.0, max(0.0, (
-                            float(sesija["Close"].iloc[-1]) - sena["L"]) /
-                            (s["R"] - sena["L"])))
+                    atkurti(s, sena, kd, float(sesija["Close"].iloc[-1]))
                 else:
-                    busena[raktas] = dict(L=s["L"], R=s.get("R"),
+                    busena[raktas] = dict(L=s["L"], R=s.get("R"), stop=s["stop"],
                                           ieina=s["ieina"], laikas=dabar)
                     s["pirmas_kartas"] = dabar
                 try:
@@ -610,6 +698,11 @@ def paleisti_live(rinkos):
         json.dump(dict(atnaujinta=datetime.now(timezone.utc).isoformat(),
                        signalai=eilutes), f, ensure_ascii=False, indent=1,
                   default=str)
+    if _KLAIDOS:
+        print("\n  SCENARIJU KLAIDOS:")
+        for k, n in sorted(_KLAIDOS.items(), key=lambda x: -x[1])[:5]:
+            print(f"    {n:>6}x  {k}")
+        _KLAIDOS.clear()
     tinkami = [e for e in eilutes if e["tinkamas"]]
     print(f"\n  aktyvus: {len(eilutes)}  (tinkami: {len(tinkami)})")
     for e in sorted(tinkami, key=lambda x: -x["progresas"]):
@@ -652,6 +745,11 @@ def paleisti_kalibracija(rinkos, dienos):
                                  pradzia_bare=i, baru_sesijoje=len(sd))
                         ivykiai.append(s)
 
+        if _KLAIDOS:
+            print("\n  SCENARIJU KLAIDOS (anksciau buvo tyliai prarytos):")
+            for k, n in sorted(_KLAIDOS.items(), key=lambda x: -x[1])[:5]:
+                print(f"    {n:>6}x  {k}")
+            _KLAIDOS.clear()
         ataskaita(ivykiai, zyme)
         if ivykiai:
             ses = sorted({e["sesija"] for e in ivykiai})
@@ -672,7 +770,7 @@ def vienalaikiskumas(df):
         for _, r in g.iterrows():
             a = int(r["pradzia_bare"])
             sk[a:min(n, a + int(r.get("isejo_bare", 1)))] += 1
-        vid.append(sk.mean())
+        vid.append(sk[:n].mean())      # buvo sk.mean() per n+2 -> ~20% per mazai
         mx = max(mx, int(sk.max()))
     return float(np.mean(vid)), mx
 
@@ -776,19 +874,33 @@ def savitikra():
               f"{'' if ar == salyga else f'  (gauta {salyga}, laukta {ar})'}")
         ok = ok and (salyga == ar)
 
-    def sesija(atid, eiga, apyv_x=3.0, n=60):
-        k = atid * np.cumprod(1 + np.asarray(eiga))
-        idx = pd.date_range("2026-07-24 09:00", periods=len(k), freq="5min",
-                            tz="Europe/Berlin")
-        d = pd.DataFrame(dict(Open=np.r_[atid, k[:-1]], High=k * 1.0008,
-                              Low=k * 0.9992, Close=k,
-                              Volume=np.full(len(k), 5e5)), index=idx)
-        d["sesija"] = [x.date() for x in idx]
-        d["minute"] = [x.hour * 60 + x.minute for x in idx]
-        d["ses_atidarymas"] = atid
-        d["vwap"] = d["Close"].expanding().mean()
-        d["apyv_santykis"] = apyv_x
-        return d
+    def sesija(atid, eiga, apyv_x=3.0, istorijos_d=LIVE_DIENOS):
+        """Barai per TIKRA sesijos_rodikliai() - ne rankomis suklijuoti.
+
+        Pirma savitikros versija pati susikurdavo vwap, ses_atidarymas ir
+        apyv_santykis stulpelius, tad sesijos_rodikliai() apskritai nebuvo
+        tikrinamas. Butent del to liko nepastebeta, kad live rezime
+        apyv_santykis visada NaN ir signalu neduoda is principo.
+        Dabar kuriami ZALI barai, o visi rodikliai skaiciuojami tikruoju keliu.
+        """
+        eiga = np.asarray(eiga)
+        k = atid * np.cumprod(1 + eiga)
+        eil, pr = [], pd.Timestamp("2026-07-24 09:00", tz="Europe/Berlin")
+        # istorija: ramios dienos su TIPINE apyvarta (jos formuoja apyv_tipine)
+        for d in range(istorijos_d, 0, -1):
+            t0 = pr - pd.Timedelta(days=d)
+            for j in range(len(k)):
+                eil.append((t0 + pd.Timedelta(minutes=5 * j), atid, atid * 1.0008,
+                            atid * 0.9992, atid, 5e5))
+        # tiriamoji diena: apyvarta apyv_x kartu didesne
+        for j in range(len(k)):
+            eil.append((pr + pd.Timedelta(minutes=5 * j),
+                        atid if j == 0 else k[j - 1], k[j] * 1.0008,
+                        k[j] * 0.9992, k[j], 5e5 * apyv_x))
+        raw = pd.DataFrame(eil, columns=["_t", "Open", "High", "Low", "Close",
+                                         "Volume"]).set_index("_t")
+        visos = sesijos_rodikliai(raw, "eu")
+        return visos[visos["sesija"] == pr.date()]
 
     def kd(uzdarymas, atr_abs, virsune_n, uzd_vieta, dugnas_n, apyvarta=5e7):
         return pd.Series(dict(uzdarymas=uzdarymas, atr_abs=atr_abs,
@@ -811,6 +923,18 @@ def savitikra():
         return None
 
     print("\nSAVITIKRA\n" + "-" * 60)
+
+    # --- ar LIVE_DIENOS pakanka, kad apyv_santykis apskritai butu skaicius --
+    # Sita patikra egzistuoja todel, kad 2026-09-27 live rezimas su 5 dienomis
+    # negalejo duoti NE VIENO signalo, ir nei viena savitikra to nematė.
+    # sesija(istorijos_d=N) duoda N+1 sesiju; parsisiusti(rinka, N) duoda N.
+    # Todel live atitikmuo yra istorijos_d = LIVE_DIENOS - 1.
+    sd = sesija(100.0, np.full(30, 0.0005), istorijos_d=LIVE_DIENOS - 1)
+    tikrinti(f"LIVE_DIENOS={LIVE_DIENOS}: live gauna apyv_santykis (ne NaN)",
+             bool(np.isfinite(sd["apyv_santykis"]).any()), True)
+    sd4 = sesija(100.0, np.full(30, 0.0005), istorijos_d=4)
+    tikrinti("su 5 sesijomis apyv_santykis dar NeRA skaicius (riba ten pat)",
+             bool(np.isfinite(sd4["apyv_santykis"]).any()), False)
 
     # --- SAP.DE etalonas ---------------------------------------------------
     # 07-22 uzdare 132.04 ties dienos dugnu (uzd_vieta 0.00), 5 d. virsune
@@ -887,8 +1011,80 @@ def savitikra():
 
     # --- baigtis: MFE matuojamas ------------------------------------------
     kilo = sesija(100.0, np.r_[np.full(10, 0.002), np.full(20, -0.001)])
-    b = baigtis(kilo, dict(ieina=100.0, tikslas=None, stop=98.0, atr_abs=2.0))
+    b = baigtis(kilo, dict(tipas=2, ieina=100.0, tikslas=None,
+                           stop=98.0, atr_abs=2.0))
     tikrinti("baigtis grazina MFE > 0 kylanciam ruozui", b["mfe_pct"] > 1.0, True)
+
+    # --- 2026-09-27 nepriklausomos perziuros radiniai: uzrakinami testais ---
+    def bb(rows):
+        return pd.DataFrame(rows, columns=["Open", "High", "Low", "Close"]
+                            ).assign(apyv_santykis=1.5)
+
+    s1f = dict(tipas=1, ieina=100.0, tikslas=110.0, stop=98.0, atr_abs=2.0)
+    r = baigtis(bb([[90.0, 90.5, 88.0, 89.0]]), s1f)
+    tikrinti("tarpas PRO stop'a vykdomas ties atidarymu, ne ties stop'u",
+             round(r["pelnas_pct"], 2), -10.00)
+    r = baigtis(bb([[99.0, 99.5, 97.0, 97.5]]), s1f)
+    tikrinti("normalus issimusimas vis dar ties stop'u",
+             round(r["pelnas_pct"], 2), -2.00)
+    r = baigtis(bb([[115.0, 116.0, 114.0, 115.5]]), s1f)
+    tikrinti("palankus tarpas virs tikslo vykdomas ties atidarymu",
+             round(r["pelnas_pct"], 2), 15.00)
+
+    kyla = bb([[100, 103, 99.8, 102], [102, 106, 101, 105],
+               [105, 105.5, 103, 103.5], [103.5, 104, 102.5, 103]])
+    tikrinti("1 scenarijui slenkancio stop'o NEBEtaikom (kortele zada fiksuota)",
+             baigtis(kyla, s1f)["baigtis"], "laikas")
+    tikrinti("2 scenarijui slenkantis stop'as veikia",
+             baigtis(kyla, dict(tipas=2, ieina=100.0, tikslas=None, stop=96.0,
+                                atr_abs=2.0))["baigtis"], "stop")
+
+    idx = pd.bdate_range(end="2026-09-25", periods=300)
+    c = pd.Series(np.linspace(100, 140, 300), index=idx)
+    dd = pd.DataFrame(dict(Open=c, High=c * 1.01, Low=c * 0.99, Close=c,
+                           Volume=np.full(300, 1e6)), index=idx)
+    rr = dienos_rodikliai(dd)
+    sesd = idx[-1].date()
+    tikrinti("_kd praleidzia tvarkinga konteksta", _kd(rr, sesd) is not None, True)
+    bloga = rr.copy()
+    bloga.loc[bloga.index[-1], "apyvarta"] = np.nan
+    tikrinti("_kd ATMETA NaN apyvarta (anksciau tyliai praeidavo)",
+             _kd(bloga, sesd) is None, True)
+
+    vid, _ = vienalaikiskumas(pd.DataFrame([
+        dict(sesija="A", baru_sesijoje=10, pradzia_bare=0, isejo_bare=10),
+        dict(sesija="A", baru_sesijoje=10, pradzia_bare=0, isejo_bare=10)]))
+    tikrinti("vienalaikiskumas dalija is baru sesijoje, ne is n+2",
+             round(vid, 2), 2.00)
+
+    r = baigtis(bb([[115.0, 116.0, 95.0, 97.0]]), s1f)
+    tikrinti("atidarymas virs tikslo skaitomas PIRMIAU uz kritima bare",
+             (r["baigtis"], round(r["pelnas_pct"], 2)), ("tikslas", 15.00))
+
+    # --- busenos atkurimas: viena nuosekli trijule ------------------------
+    k_a = kd(128.32, 3.0, 138.26, 0.17, 127.50)
+    sig_a = dict(tipas=1, ieina=134.00, stop=127.42, tikslas=137.00,
+                 R=137.00, L=127.42, atr_abs=3.0)
+    _bendra(sig_a, k_a)
+    atkurti(sig_a, dict(ieina=130.88, stop=127.42, R=133.88, L=127.42,
+                        laikas="x"), k_a, 134.00)
+    laukiamas_rr = (133.88 - 130.88) / (130.88 - 127.42)
+    tikrinti("atkurus busena R:R skaiciuojamas is ATKURTU ieina/stop/tikslas",
+             round(sig_a["rr"], 2), round(laukiamas_rr, 2))
+    tikrinti("atkurus busena rizika eurais atitinka atkurta iejima",
+             round(sig_a["rizika_eur"]), round((130.88 - 127.42) / 130.88 * POZICIJA))
+
+    # --- dividendu pataisa tikrai prijungta prie parsisiusti() ------------
+    import inspect
+    tikrinti("parsisiusti() paduoda dividendus i dienos_rodikliai",
+             "Dividends" in inspect.getsource(parsisiusti), True)
+    dv = pd.Series(0.0, index=idx)
+    dv.iloc[-3] = 5.0
+    tikrinti("dividendai patenka i div_lange",
+             float(dienos_rodikliai(dd, dv)["div_lange"].iloc[-1]) > 0, True)
+
+    tikrinti("tuscias horizontas duoda 'laikas', ne atskira baigti",
+             baigtis(bb([]).iloc[:0], s1f)["baigtis"], "laikas")
 
     print("-" * 60)
     print("SAVITIKRA: " + ("VISKAS GERAI" if ok else "YRA KLAIDU"))
