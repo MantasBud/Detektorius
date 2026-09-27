@@ -270,6 +270,20 @@ S2_MIN_TARPAS_ATR = 1.0
 S2_MIN_APYVARTA_X = 2.0     # pirmu 30 min apyvarta
 S2_ORB_BARU = 6             # atidarymo diapazonas = 30 min
 S2_TRAIL_ATR = 1.0          # slenkantis stop'as ATR vienetais (ne 3 barai!)
+# PROGRESO LUBOS (Manto sprendimas 2026-09-28). Kiek ATR virs proverzio
+# lygio laikome "judesys jau nueitas". Tai VIENINTELIS puslapio skaicius,
+# neisvestas is mechanikos - 2 scenarijus tikslo neturi, tad nera ir dydzio,
+# i kuri butu galima matuoti progresa.
+#
+# Kodel ne 1.0: slenkantis stop'as yra 1.0 ATR. Vadinasi, nuejus 1 ATR virs
+# proverzio, sandoris tik ka pasieke ta atstuma, kuri stop'as ATIDUOS
+# apsisukus - t.y. grynasis rezultatas ten dar nulis. Vadinti ta taska
+# "100% nueita" yra atvirkscia.
+#
+# Riba veikia TIK puslapio spalva ir rikiavima. Aptikimo, iejimo, stop'o ir
+# isejimo ji nekeicia. Tikroji verte ateis is matavimo: irasomas laukas
+# virs_proverzio_atr ir jis yra kandidatu sarase.
+S2_PROGRESO_LUBOS = 1.5
 
 RINKOS = {
     "eu": dict(zyme="EU", indeksas="EXSA.DE", tz="Europe/Berlin",
@@ -756,7 +770,8 @@ def scenarijus_2(langas, kd, iki_uzdarymo=None, rinka="eu"):
     #      zemiau kainos, tad juosta is karto rodydavo 100% ir visos kortelės
     #      kristu i "velyva stadija".
     #   b) paros laikas: 10:00 prasidejes ralis turi visa diena, 16:00 - nebe.
-    prog_j = (kaina - orb_max) / max(1e-9, atr)
+    virs = (kaina - orb_max) / max(1e-9, atr)
+    prog_j = virs / S2_PROGRESO_LUBOS
     prog_l = 0.0
     if iki_uzdarymo is not None:
         r = RINKOS.get(rinka, RINKOS["eu"])
@@ -766,6 +781,7 @@ def scenarijus_2(langas, kd, iki_uzdarymo=None, rinka="eu"):
                tikslas=None, stop=stop, R=None, L=orb_min, atr_abs=atr,
                progresas=min(1.0, max(prog_j, prog_l)),
                progresas_tikslus=False, tarpas_atr=tarpas / atr,
+               virs_proverzio_atr=virs,
                virsune_vertinimas=kaina + S2_TRAIL_ATR * atr)
     sig["kliutys"] = _bendra(sig, kd, rinka)
     return sig
@@ -1790,7 +1806,8 @@ def pjuviai(df, tik_kandidatai=False):
     """
     print("\n  KANDIDATAI I FILTRUS (nieko neblokuoja - tik matoma)")
     KAND = ("rinkos_pokytis", "platumas", "plat_d30", "santykinis",
-            "atsiemimas_atr", "baru_nuo_dugno", "nesekmes")
+            "atsiemimas_atr", "baru_nuo_dugno", "nesekmes",
+            "virs_proverzio_atr")
     # iki_ataskaitos CIA NERA tycia: kalendorius paimamas SIANDIEN ir
     # taikomas visoms praeities sesijoms, o [-12:] dar ir nukerpa datas.
     # Vadinasi, praeityje jis "zinojo" tai, ko tuo metu nebuvo. Pjuvis
@@ -1843,6 +1860,8 @@ def pjuviai(df, tik_kandidatai=False):
     pjuvis("pagal PLATUMA (% universo virs vakar uzdarymo)", "platumas")
     pjuvis("pagal PLATUMO pokyti per 30 min", "plat_d30")
     pjuvis("pagal SANTYKINI stipruma (savo - rinkos, %)", "santykinis")
+    pjuvis("pagal atstuma VIRS PROVERZIO, ATR (2 scenarijus; is cia lubos)",
+           "virs_proverzio_atr")
     pjuvis("pagal baru NUO DUGNO", "baru_nuo_dugno")
     pjuvis("pagal NESEKMIU skaiciu (kiek kartu jau prarado lygi)",
            "nesekmes", kvantiliai=False)
@@ -2338,6 +2357,44 @@ def savitikra():
     let = sesija(962.00, np.r_[np.full(6, 0.0002), np.full(24, 0.00005)])
     p_eu = pirmas_signalas(lambda l, k: scenarijus_2(l, k, 350, "eu"), let, k_ady)
     p_us = pirmas_signalas(lambda l, k: scenarijus_2(l, k, 350, "us"), let, k_ady)
+    # --- 2 scenarijaus progreso lubos ------------------------------------
+    k_lub = kd(100.0, 2.0, 130.0, 0.5, 90.0)
+    # tarpas 1.2 ATR, po to eiga - kad butu ka matuoti virs proverzio
+    lub = sesija(102.4, np.r_[np.full(6, 0.0008), np.full(30, 0.0022)])
+    s_lub = None
+    for _i in range(S2_ORB_BARU + 1, len(lub)):
+        x = scenarijus_2(lub.iloc[:_i + 1], k_lub, 300, "eu")
+        if x and x["virs_proverzio_atr"] > 0.9:
+            s_lub = x
+            break
+    tikrinti("2 scen.: irasomas atstumas VIRS PROVERZIO ATR vienetais",
+             bool(s_lub) and s_lub["virs_proverzio_atr"] > 0.9, True)
+    if s_lub:
+        # TIKSLI lygybe: laisva patikra ("didesnis uz X, mazesnis uz 1")
+        # praeidavo ir tada, kai lubos is viso nebuvo taikomos.
+        laukt = min(1.0, s_lub["virs_proverzio_atr"] / S2_PROGRESO_LUBOS)
+        tikrinti("         progresas = atstumas / LUBOS (ne / vienas ATR)",
+                 round(s_lub["progresas"], 6), round(laukt, 6))
+        tikrinti("         ir tai NESUTAMPA su dalyba is vieno ATR",
+                 round(s_lub["progresas"], 6) !=
+                 round(min(1.0, s_lub["virs_proverzio_atr"]), 6), True)
+        # ne tautologija: imam TIKRA signala, nueijusi virs lubu
+        s_pilnas = None
+        for _i in range(S2_ORB_BARU + 1, len(lub)):
+            x = scenarijus_2(lub.iloc[:_i + 1], k_lub, 300, "eu")
+            if x and x["virs_proverzio_atr"] >= S2_PROGRESO_LUBOS:
+                s_pilnas = x
+                break
+        tikrinti(f"         nuejus virs {S2_PROGRESO_LUBOS} ATR progresas = 100%",
+                 bool(s_pilnas) and round(s_pilnas["progresas"], 4) == 1.0, True)
+        tikrinti("         1.0 ATR virs proverzio NEBEZYMIMA kaip issikvepes",
+                 (1.0 / S2_PROGRESO_LUBOS) < 0.8, True)
+    tikrinti("lubos NEKEICIA iejimo, stop'o ir tikslo",
+             bool(s_lub) and s_lub["tikslas"] is None
+             and abs(s_lub["stop"] - max(float(lub.iloc[:S2_ORB_BARU]["Low"].min()),
+                                         s_lub["ieina"] - S2_TRAIL_ATR * 2.0)) < 1e-9,
+             True)
+
     tikrinti("2 scen. laiko progresas naudoja TOS rinkos sesijos ilgi",
              bool(p_eu) and bool(p_us) and
              round(p_eu["progresas"], 3) != round(p_us["progresas"], 3), True)
