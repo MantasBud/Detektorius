@@ -62,12 +62,13 @@ POZICIJA = D.POZICIJA
 SANAUDOS = D.SANAUDOS_EUR
 
 # (etikete, tikeriu kandidatai, pradzios data, pabaigos data)
+# 404 patikrinta pirmame paleidime: ADYEN.DE, AMD.BE, CAPP.PA, PTX.BE neegzistuoja.
 ATVEJAI = [
-    ("ADYEN",     ["ADYEN.AS", "ADYEN.DE"],        "2026-08-10", "2026-08-10"),
-    ("AMD IBIS",  ["AMD.DE", "AMD.F", "AMD.BE"],   "2026-08-14", "2026-08-21"),
-    ("CAP SBF",   ["CAP.PA", "CAPP.PA", "CGM.DE"], "2026-07-23", "2026-07-23"),
-    ("PTX IBIS",  ["PTX.DE", "PTX.F", "PTX.BE"],   "2026-08-03", "2026-08-03"),
-    ("SAP",       ["SAP.DE", "SAP.F"],             "2026-07-23", "2026-07-23"),
+    ("ADYEN",     ["ADYEN.AS"],           "2026-08-10", "2026-08-10"),
+    ("AMD IBIS",  ["AMD.DE", "AMD.F"],    "2026-08-14", "2026-08-21"),
+    ("CAP SBF",   ["CAP.PA", "CGM.DE"],   "2026-07-23", "2026-07-23"),
+    ("PTX IBIS",  ["PTX.DE", "PTX.F"],    "2026-08-03", "2026-08-03"),
+    ("SAP",       ["SAP.DE", "SAP.F"],    "2026-07-23", "2026-07-23"),
 ]
 
 UZDARYMAS_MIN = 17 * 60 + 30     # EU sesija
@@ -77,18 +78,34 @@ TZ = "Europe/Berlin"
 # ---------------------------------------------------------------- pagalbines
 
 def vienas(df, t):
-    """yfinance kartais grazina MultiIndex net vienam tikeriui."""
+    """Isskiria vieno tikerio lentele is bet kurios yfinance orientacijos.
+
+    yfinance vienam tikeriui grazina MultiIndex dviem budais:
+      A) lygis0 = laukas ("Close"), lygis1 = tikeris   <- numatytoji
+      B) lygis0 = tikeris, lygis1 = laukas             <- group_by="ticker"
+    Pirma sio skripto versija mokejo tik B, todel VISI penki atvejai grizo
+    "0 dienu", nors duomenys buvo atsiusti. Cia tvarkomos abi.
+    """
     if df is None or len(df) == 0:
         return None
+    d = df
     if isinstance(df.columns, pd.MultiIndex):
-        lygiai = df.columns.get_level_values(0)
-        if t in set(lygiai):
+        l0 = set(df.columns.get_level_values(0))
+        l1 = set(df.columns.get_level_values(1))
+        if t in l0:
             d = df[t]
+        elif t in l1:
+            d = df.xs(t, axis=1, level=1)
+        elif len(l1) == 1:
+            d = df.droplevel(1, axis=1)
+        elif len(l0) == 1:
+            d = df.droplevel(0, axis=1)
         else:
-            d = df.droplevel(0, axis=1) if len(set(lygiai)) == 1 else None
-    else:
-        d = df
-    if d is None:
+            print(f"      (neatpazinta stulpeliu struktura: {list(df.columns)[:4]})")
+            return None
+    truksta = [c for c in ("Open", "High", "Low", "Close") if c not in d.columns]
+    if truksta:
+        print(f"      (truksta stulpeliu {truksta}, yra {list(d.columns)[:6]})")
         return None
     d = d.dropna(subset=["Open", "High", "Low", "Close"])
     return d if len(d) else None
@@ -98,12 +115,24 @@ def rasti_tikeri(kandidatai):
     """Grazina (tikeris, dienos_df). Isbando kandidatus, praneša kuris tiko."""
     for t in kandidatai:
         try:
-            raw = yf.download(t, period="3y", interval="1d",
-                              auto_adjust=False, progress=False)
+            raw = yf.download(t, period="3y", interval="1d", auto_adjust=False,
+                              progress=False, group_by="ticker")
             d = vienas(raw, t)
+            if d is None or len(d) < 250:      # atsarginis kelias
+                try:
+                    h = yf.Ticker(t).history(period="3y", auto_adjust=False)
+                    if h is not None and len(h) > 250:
+                        d = h.dropna(subset=["Open", "High", "Low", "Close"])
+                        print(f"    tikeris {t}: per Ticker.history()")
+                except Exception:
+                    pass
             if d is not None and len(d) > 250:
                 med = float((d["Close"] * d["Volume"]).tail(20).median())
-                print(f"    tikeris {t}: OK, {len(d)} dienu, "
+                try:
+                    vardas = yf.Ticker(t).info.get("shortName") or "?"
+                except Exception:
+                    vardas = "?"
+                print(f"    tikeris {t}: OK — {vardas}, {len(d)} dienu, "
                       f"apyvarta ~{med/1e6:.1f} mln.")
                 return t, d
             print(f"    tikeris {t}: per mazai duomenu "
@@ -420,11 +449,18 @@ def atvejis(etikete, kandidatai, nuo_s, iki_s):
         return
 
     raw = yf.download(t, period="60d", interval="5m", auto_adjust=False,
-                      progress=False, prepost=False)
+                      progress=False, prepost=False, group_by="ticker")
     b5 = vienas(raw, t)
+    if b5 is None or len(b5) < 100:
+        try:
+            h = yf.Ticker(t).history(period="60d", interval="5m", auto_adjust=False)
+            b5 = h.dropna(subset=["Open", "High", "Low", "Close"]) if h is not None else None
+        except Exception:
+            b5 = None
     if b5 is None or len(b5) < 100:
         print("    5 min baru negauta")
         return
+    print(f"    5 min baru: {len(b5)}, nuo {b5.index[0]} iki {b5.index[-1]}")
     visos = D.sesijos_rodikliai(b5, "eu")
 
     for ses, sd in visos.groupby("sesija", sort=True):
