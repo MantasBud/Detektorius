@@ -498,9 +498,13 @@ def dienu_iki_ataskaitos(datos, ses):
         return np.nan
     try:
         d = [date.fromisoformat(x) for x in datos]
-        return min(((x - ses).days for x in d), key=abs)
+        v = min(((x - ses).days for x in d), key=abs)
     except Exception:
         return np.nan
+    # Dalis tikeriu turi tik kelis metus senas datas - tada "arciausia
+    # ataskaita" yra -1465 dienu, ir tai ne informacija, o duomenu skyle.
+    # Kalibracijoje tokios eilutes buvo sumestos i zemiausia ketvirti.
+    return v if abs(v) <= 200 else np.nan
 
 
 def sesijos_rodikliai(barai, rinka):
@@ -1614,7 +1618,8 @@ def variantu_lentele(df):
               f"{(gg[bg]=='tikslas').mean()*100:>6.1f}%"
               f"{(gg[bg]=='stop').mean()*100:>6.1f}%"
               f"{(gg[bg]=='laikas').mean()*100:>7.1f}%"
-              f"{gg[pc].mean():>8.2f}{np.mean(pdd):>9.2f}"
+              f"{np.mean(gg.assign(p=gg[pc]).groupby('sesija')['p'].mean()):>8.2f}"
+              f"{np.mean(pdd):>9.2f}"
               f"  [{lo:>6.2f},{hi:>6.2f}]{'  <<<' if lo > 0 else ''}")
 
 
@@ -1718,8 +1723,12 @@ def pjuviai(df, tik_kandidatai=False):
         # skirtumas matomas visuose keturiuose matavimuose - be sito
         # pjuviai butu tiesiog skaiciai, is kuriu galima issirinkti patinkanti.
         if _DALIS[0] and stulp in KAND and len(kraštai) >= 2:
-            _KAND_REZ[(stulp, _DALIS[0])] = (kraštai[0][0], kraštai[-1][0],
-                                             sum(x[1] for x in kraštai))
+            # Kraštine grupe su 1 eilute duodavo +-200 EUR "skirtumus"
+            # (nesekmes = 10, N = 1). Verdiktui paduodam MAZESNI kraštini
+            # dydi, o ne bendra N.
+            _KAND_REZ[(stulp, _DALIS[0])] = (
+                kraštai[0][0], kraštai[-1][0],
+                min(kraštai[0][1], kraštai[-1][1]))
 
     pjuvis("pagal ATR (ar didesnis judrumas kenkia, ar padeda?)", "atr_pct")
     pjuvis("pagal ATSIEMIMO dydi, ATR vienetais (peilio kandidatas)",
@@ -1788,9 +1797,15 @@ def ataskaita(ivykiai, zyme, trumpai=False):
     print(f"\n  suveikimu: {len(df)}   sesiju: {sesiju}   "
           f"per diena: {len(df)/max(1,sesiju):.1f}   "
           f"vienu metu ekrane: {vid_k:.1f} (daugiausia {max_k})")
+    # DU svoriai, nes jie reiskia skirtingus dalykus ir 2026-09-28 logas
+    # parode, kad skirtumas nemazas: "% diena" yra tai, ka uzdirbtu
+    # atsitiktinai paimtas vienas tos dienos signalas, o "% sand." - visu
+    # sandoriu vidurkis, t.y. arciau to, kas gaunasi imant po kelis per
+    # aktyvia diena. Anksciau abu buvo spausdinami, bet skirtingose
+    # lentelese ir tuo paciu pavadinimu.
     print(f"\n{'SCENARIJUS':<26}{'N':>6}{'per d.':>7}{'tiksl':>7}{'stop':>7}"
-          f"{'laikas':>8}{'vid %':>8}{'EUR':>8}{'MFE %':>8}{'MAE %':>8}"
-          f"{'val.':>6}{'95% EUR':>19}")
+          f"{'laikas':>8}{'% diena':>9}{'% sand.':>9}{'EUR':>8}{'MFE %':>8}"
+          f"{'MAE %':>8}{'val.':>6}{'95% EUR':>19}")
     print("-" * 124)
     rng = np.random.default_rng(42)
     for nm, g in df.groupby("scenarijus"):
@@ -1806,7 +1821,8 @@ def ataskaita(ivykiai, zyme, trumpai=False):
               f"{(g['baigtis']=='tikslas').mean()*100:>6.1f}%"
               f"{(g['baigtis']=='stop').mean()*100:>6.1f}%"
               f"{(g['baigtis']=='laikas').mean()*100:>7.1f}%"
-              f"{np.mean(ppd):>8.2f}{np.mean(pdd):>8.2f}"
+              f"{np.mean(ppd):>9.2f}{g['pelnas_pct'].mean():>9.2f}"
+              f"{np.mean(pdd):>8.2f}"
               f"{g['mfe_pct'].mean():>8.2f}{g['mae_pct'].mean():>8.2f}"
               f"{g['minuciu'].median()/60:>6.1f}  [{lo:>6.2f},{hi:>6.2f}]"
               f"{'  <<<' if lo > 0 else ''}")
@@ -2324,6 +2340,19 @@ def savitikra():
     tikrinti("tuscias fonas nenulauzia",
              bool(np.isnan(_fono_laukai(pd.DataFrame(), kylantis.index[0],
                                         kylantis, 0)["platumas"])), True)
+
+    # kraštiniu grupiu dydis: verdiktui svarbu MAZIAUSIA kraštine grupe
+    import io as _io2, contextlib as _cl2
+    _KAND_REZ.clear(); _DALIS[0] = "testas"
+    kr = pd.DataFrame([dict(pelnas_pct=1.0, nesekmes=0, baigtis="tikslas",
+                            mfe_pct=1.0, sanaudos=10.0, rinka="EU")] * 300 +
+                      [dict(pelnas_pct=-1.0, nesekmes=9, baigtis="stop",
+                            mfe_pct=0.1, sanaudos=10.0, rinka="EU")] * 2)
+    with _cl2.redirect_stdout(_io2.StringIO()):
+        pjuviai(kr, tik_kandidatai=True)
+    tikrinti("verdiktui paduodamas MAZIAUSIOS kraštines grupes dydis",
+             _KAND_REZ.get(("nesekmes", "testas"), (0, 0, -1))[2], 2)
+    _DALIS[0] = ""; _KAND_REZ.clear()
 
     _KAND_REZ.clear()
     for m in ("EU matyta", "EU NEMATYTA", "JAV matyta", "JAV NEMATYTA"):
