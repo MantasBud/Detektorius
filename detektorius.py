@@ -1271,6 +1271,44 @@ def variantu_lentele(df):
               f"  [{lo:>6.2f},{hi:>6.2f}]{'  <<<' if lo > 0 else ''}")
 
 
+def kandidato_testas(df):
+    """Vienas is anksto uzrasytas binarinis pjuvis, tikrinamas VISOSE pusese.
+
+    Is 2026-09-27 kalibracijos vienintelis kandidatas, rodantis ta pacia
+    krypti ABIEJOSE rinkose, yra kelias iki buvusio lygio: zemiausias
+    ketvirtis (0.5-1.0 ATR) neigiamas ir EU (-35.0 EUR), ir JAV (-36.6 EUR).
+    Kiti kandidatai (ATR, rizika) rinkose priestarauja vienas kitam, tad
+    netikrinami.
+
+    Riba 1.0 ATR nera ieskota - tai ketvirciu riba, kuria pasiule patys
+    duomenys, ir ji cia uzrasoma, kad kita kalibracija galetu ja PRIIMTI
+    arba ATMESTI keturiuose matavimuose, o ne likti itarimu.
+    """
+    if "kelias_atr" not in df or df["kelias_atr"].isna().all():
+        return
+    g = df.dropna(subset=["kelias_atr"]).copy()
+    g["eur"] = g["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR
+    print("\n  KANDIDATAS: kelias iki buvusio lygio >= 1.0 ATR")
+    print(f"    {'grupe':<16}{'N':>6}{'vid EUR':>10}{'tiksl':>7}{'stop':>7}"
+          f"{'95% EUR':>19}")
+    rng = np.random.default_rng(42)
+    for nm, mask in (("< 1.0 ATR", g["kelias_atr"] < 1.0),
+                     (">= 1.0 ATR", g["kelias_atr"] >= 1.0)):
+        gg = g[mask]
+        if gg.empty:
+            continue
+        pdd = gg.groupby("sesija")["eur"].mean().values
+        if len(pdd) >= 10:
+            bs = [rng.choice(pdd, len(pdd), replace=True).mean() for _ in range(2000)]
+            lo, hi = np.percentile(bs, [2.5, 97.5])
+        else:
+            lo = hi = float("nan")
+        print(f"    {nm:<16}{len(gg):>6}{gg['eur'].mean():>10.2f}"
+              f"{(gg['baigtis']=='tikslas').mean()*100:>6.1f}%"
+              f"{(gg['baigtis']=='stop').mean()*100:>6.1f}%"
+              f"  [{lo:>6.2f},{hi:>6.2f}]{'  <<<' if lo > 0 else ''}")
+
+
 def pjuviai(df):
     """KANDIDATAI I FILTRUS (2 pakopa).
 
@@ -1345,6 +1383,7 @@ def ataskaita(ivykiai, zyme, trumpai=False):
               f"{g['minuciu'].median()/60:>6.1f}  [{lo:>6.2f},{hi:>6.2f}]"
               f"{'  <<<' if lo > 0 else ''}")
     variantu_lentele(df)
+    kandidato_testas(df)
     if trumpai:
         return
     pjuviai(df)
