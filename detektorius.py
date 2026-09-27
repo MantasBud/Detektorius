@@ -451,6 +451,11 @@ def scenarijus_1(langas, kd):
                tikslas=R, stop=stop, R=R, L=L, atr_abs=atr,
                progresas=(kaina - L) / (R - L) if R > L else 0.0,
                progresas_tikslus=True, kritimas_atr=kritimas / atr,
+               atsiemimas_atr=(kaina - vakar_uzd) / atr,
+               # TIK puslapiui. I "kliutys" NEdedama tycia: kitaip pasikeistu
+               # "tinkamas", o su juo - kalibracijos imtis, ir nebegaletume
+               # patikrinti, ar slepti buvo teisinga.
+               silpnas_atsiemimas=bool((kaina - vakar_uzd) / atr < 0.25),
                R_pilnas=R_pilnas, tikslas_ribotas=bool(R < R_pilnas - 1e-9),
                kelias_atr=(R_pilnas - kaina) / atr)
     sig["kliutys"] = _bendra(sig, kd)
@@ -725,6 +730,7 @@ header{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;
   justify-content:space-between;margin-bottom:6px}
 h1{font-size:20px;margin:0;letter-spacing:-.01em}
 .sub{color:var(--dim);font-size:13px}
+.zurnalas[hidden]{display:none}
 .zurnalas{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0 18px;padding:12px 14px;
   background:var(--card);border:1px solid var(--line);border-radius:10px}
 .z div{font-size:12px;color:var(--dim)}
@@ -739,7 +745,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)
 .k{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--ok);
   border-radius:10px;padding:13px 14px}
 .k.blok{border-left-color:var(--blok)}
-.k.velyva{opacity:.62;border-left-color:var(--velyva)}
+.k.velyva{opacity:.72;border-left-color:var(--blok)}
 .vir{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
 .tick{font-weight:700;font-size:16px;letter-spacing:-.01em}
 .zenk{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;
@@ -749,7 +755,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)
 .juosta{height:8px;background:var(--juosta);border-radius:5px;overflow:hidden;margin:2px 0 4px}
 .uzp{height:100%;background:var(--ok);border-radius:5px}
 .k.blok .uzp{background:var(--blok)}
-.k.velyva .uzp{background:var(--velyva)}
+.k.velyva .uzp{background:var(--blok)}
 .uzp.vert{background:repeating-linear-gradient(90deg,var(--ok) 0 6px,transparent 6px 10px)}
 .k.blok .uzp.vert{background:repeating-linear-gradient(90deg,var(--blok) 0 6px,transparent 6px 10px)}
 .proc{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);
@@ -794,6 +800,11 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 <footer>
   Pozicija 18&nbsp;000&nbsp;€, sąnaudos 10&nbsp;€ už ciklą (lūžio taškas 0,0556&nbsp;%).
   Horizontas 3 sesijos, pozicija nešama per naktį.<br>
+  <b>atsiėmė</b> — kiek ATR kaina yra virš vakarykščio uždarymo. SAP 07-23
+  krintantis peilis turėjo <b>0,03 ATR</b> (kaina vos palietė lygį ir apsivertė),
+  o trys tikri apsisukimai — 0,91–1,75 ATR. Žemiau 0,25 ATR ženkliukas gintaro
+  spalvos. Tai įspėjimas, ne filtras: viena peilio patirtis nėra pagrindas
+  blokuoti.<br>
   <b>iki lygio</b> — kiek ATR nuo įėjimo iki buvusio lygio. Kalibracijoje
   signalai, kur šis dydis &lt; 1 ATR, prarado pinigus <b>abiejose</b> rinkose
   (−35 € EU, −37 € JAV) — vienintelis pjūvis, sutapęs abiejose. Todėl toks
@@ -815,6 +826,7 @@ const PAV = {
   "Kritimas ir apsisukimas":"Kritimas ir apsisukimas",
   "Naujienu tarpas ir eiga":"Naujienų tarpas ir eiga"
 };
+const silpnas = s => s.silpnas_atsiemimas === true;
 const nr = (x,n=2)=> (x===null||x===undefined||x==='')?'–':Number(x).toFixed(n);
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -829,7 +841,8 @@ function kortele(s){
   const p = Math.max(0, Math.min(1, Number(s.progresas)||0));
   const velyva = p >= 0.8;
   const tikslus = s.progresas_tikslus !== false;
-  const cls = ['k', blok?'blok':'', velyva?'velyva':''].filter(Boolean).join(' ');
+  const cls = ['k', (blok || silpnas(s))?'blok':'', velyva?'velyva':''
+              ].filter(Boolean).join(' ');
   const zenkl = [];
   if (Number.isFinite(Number(s.rr)) && s.rr)
     zenkl.push(`<span class="z2 ${Number(s.rr) >= 1 ? 'geras' : ''}">R:R ${nr(s.rr)}</span>`);
@@ -837,6 +850,8 @@ function kortele(s){
   if (s.atr_pct) zenkl.push(`<span class="z2">ATR ${nr(s.atr_pct,1)}%</span>`);
   if (s.kritimas_atr) zenkl.push(`<span class="z2">krito ${nr(s.kritimas_atr,1)} ATR</span>`);
   if (s.kelias_atr) zenkl.push(`<span class="z2 ${Number(s.kelias_atr) < 1 ? 'kliutis' : ''}">iki lygio ${nr(s.kelias_atr,1)} ATR</span>`);
+  if (s.atsiemimas_atr !== undefined && s.atsiemimas_atr !== null)
+    zenkl.push(`<span class="z2 ${Number(s.atsiemimas_atr) < 0.25 ? 'kliutis' : ''}">atsiėmė ${nr(s.atsiemimas_atr,2)} ATR</span>`);
   if (s.tarpas_atr) zenkl.push(`<span class="z2">tarpas ${nr(s.tarpas_atr,1)} ATR</span>`);
   zenkl.push(`<span class="z2">${amzius(s.amzius_min)}</span>`);
   if (s.tikslas_ribotas) zenkl.push(`<span class="z2">tikslas ribotas</span>`);
@@ -859,13 +874,18 @@ function kortele(s){
   </article>`;
 }
 
+let rodomi = [], sig = [];
 function piesti(){
   const el = document.getElementById('turinys');
-  let sig = (duom.signalai||[]).filter(s => B[s.rinka] !== false);
-  if (!B.visi) sig = sig.filter(s => s.tinkamas);
+  sig = (duom.signalai||[]).filter(s => B[s.rinka] !== false);
   sig.sort((a,b)=> (Number(b.progresas)||0) - (Number(a.progresas)||0));
-  const ankstyvi = sig.filter(s => (Number(s.progresas)||0) < 0.8);
-  const velyvi   = sig.filter(s => (Number(s.progresas)||0) >= 0.8);
+  const velyva  = s => (Number(s.progresas)||0) >= 0.8;
+  // Paslepiami: krintancio peilio kandidatai ir tie, kuriuos blokuoja kliutys.
+  // Zurnalas juos vis tiek raso, tad veliau matysime, ar slepti buvo teisinga.
+  const slepti   = sig.filter(s => silpnas(s) || !s.tinkamas);
+  rodomi = sig.filter(s => !silpnas(s) && s.tinkamas);
+  const ankstyvi = rodomi.filter(s => !velyva(s));
+  const velyvi   = rodomi.filter(velyva);
   let h = '';
   if (!sig.length){
     h = '<div class="tuscia">Šiuo metu nė vieno scenarijaus, atitinkančio pasirinkimą.' +
@@ -873,14 +893,21 @@ function piesti(){
   } else {
     if (ankstyvi.length) h += `<h2>Aktyvūs · ${ankstyvi.length}</h2>
       <div class="tinkl">${ankstyvi.map(kortele).join('')}</div>`;
-    if (velyvi.length) h += `<h2>Vėlyva stadija · ${velyvi.length}</h2>
+    if (velyvi.length) h += `<h2>Išsikvėpę · per vėlu šokti · ${velyvi.length}</h2>
       <div class="tinkl">${velyvi.map(kortele).join('')}</div>`;
+    if (slepti.length && B.visi) h += `<h2>Silpnas atsiėmimas ir blokuoti · ${slepti.length}</h2>
+      <div class="tinkl">${slepti.map(kortele).join('')}</div>`;
+    if (slepti.length && !B.visi) h += `<div class="tuscia">Paslėpta ${slepti.length}: `
+      + `krintančio peilio kandidatai (atsiėmė &lt; 0,25 ATR) ir blokuoti. `
+      + `Spausk „Visi", jei nori juos matyti.</div>`;
+    if (!ankstyvi.length && !velyvi.length)
+      h = '<div class="tuscia">Nė vieno švaraus scenarijaus.</div>' + h;
   }
   el.innerHTML = h;
   const t = duom.atnaujinta ? new Date(duom.atnaujinta) : null;
   document.getElementById('antraste').textContent =
     (t ? 'atnaujinta ' + t.toLocaleTimeString('lt-LT',{hour:'2-digit',minute:'2-digit'}) : '') +
-    ` · rodoma ${sig.length} iš ${(duom.signalai||[]).length}`;
+    ` · rodoma ${rodomi.length} iš ${sig.length}`;
 }
 
 function zurnalas(z){
@@ -1350,6 +1377,8 @@ def pjuviai(df):
                   f"{(gg['baigtis']=='stop').mean()*100:>6.0f}%")
 
     pjuvis("pagal ATR (ar didesnis judrumas kenkia, ar padeda?)", "atr_pct")
+    pjuvis("pagal ATSIEMIMO dydi, ATR vienetais (peilio kandidatas)",
+           "atsiemimas_atr")
     pjuvis("pagal kritimo gyli, ATR vienetais", "kritimas_atr")
     pjuvis("pagal kelia iki buvusio lygio, ATR vienetais", "kelias_atr")
     pjuvis("pagal rizika eurais", "rizika_eur")
@@ -1480,10 +1509,24 @@ def savitikra():
     # --- SAP.DE etalonas ---------------------------------------------------
     # 07-22 uzdare 132.04 ties dienos dugnu (uzd_vieta 0.00), 5 d. virsune
     # 138.26, ATR ~3.0. 07-23 kaina taip ir NEATSIEME 132.04 -> signalo nera.
-    k_sap = kd(132.04, 3.0, 138.26, 0.00, 127.50)
-    knife = sesija(131.00, np.r_[np.full(10, -0.0015), np.full(30, -0.0005)])
-    tikrinti("SAP 07-23 (peilis, neatsieme uzdarymo) -> signalo NERA",
-             scenarijus_1(knife, k_sap) is None, True)
+    # 2026-09-27 atveju patikra parode, kad si rekonstrukcija buvo NETIKRA:
+    # tikruose baruose SAP 07-23 kaina 10:05 buvo 132.20, t.y. TRUMPAM atsieme
+    # 132.04, ir signalas suveike (po to diena nukrito iki 127.50). Todel testas
+    # perrasytas: jis nebeteigia, kad peilio nera, o fiksuoja TIKRA elgsena -
+    # menkas atsiemimas (0.03 ATR) signala DUODA, ir tai matoma kortelėje.
+    k_sap = kd(132.04, 4.60, 138.26, 0.00, 127.50)
+    # ramus atidarymo diapazonas, paskui trumpas kilstelejimas vos virs
+    # 132.04 (kaip 10:05 tikroveje), ir apsivertimas - kaip 07-23.
+    knife = sesija(131.00, np.r_[np.full(6, 0.0005), np.full(3, 0.0025),
+                                 np.full(21, -0.0012)])
+    s_knife = pirmas_signalas(scenarijus_1, knife, k_sap)
+    tikrinti("SAP 07-23: menkas atsiemimas signala DUODA (peilis praeina)",
+             s_knife is not None, True)
+    if s_knife:
+        print(f"         atsieme tik {s_knife['atsiemimas_atr']:.2f} ATR "
+              f"-> kortelėje gintaro zenklas (riba 0.25)")
+        tikrinti("         atsiemimas mazesnis uz 0.25 ATR",
+                 s_knife["atsiemimas_atr"] < 0.25, True)
 
     # 07-24: atidare 130.88, kilo ir atsieme 128.32 (vakarykscio uzdarymo)
     k_sap2 = kd(128.32, 3.0, 138.26, 0.17, 127.50)
@@ -1500,6 +1543,10 @@ def savitikra():
                  round(s["ieina"] - s["stop"], 2) <= round(0.5 * 3.0, 2) + 1e-9, True)
         tikrinti("         R:R = 1.00 (tikslas 0.5 ATR / rizika 0.5 ATR)",
                  round(s["rr"], 2), 1.00)
+        tikrinti("         tikras apsisukimas atsiima DAUG (>0.5 ATR)",
+                 s["atsiemimas_atr"] > 0.5, True)
+        tikrinti("         ir todel NEZYMIMAS kaip peilio kandidatas",
+                 s["silpnas_atsiemimas"], False)
 
     # --- tolimas buves lygis NEBEDIDINA tikslo -----------------------------
     # Konservatyvus tikslas nuo buvusio lygio nepriklauso, kol tas lygis toli.
