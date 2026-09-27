@@ -121,6 +121,14 @@ HORIZONTAS_SESIJU = 3
 # Patikrinta 2026-09-27: dienos=5 -> 390/390 NaN.
 LIVE_DIENOS = 30
 BUSENOS_FAILAS = "busena.json"
+ZURNALAS = "docs/zurnalas.csv"
+ZURNALO_STULPELIAI = [
+    "raktas", "gimimas", "rinka", "tickeris", "scenarijus", "tipas", "sesija",
+    "ieina", "tikslas", "stop", "rr", "rizika_eur", "atr_pct",
+    "tinkamas", "kliutys",
+    "paskut_laikas", "paskut_kaina", "mfe_pct", "mae_pct",
+    "baigtis", "pelnas_pct", "eur", "minuciu",
+]
 DIVIDENDU_TALPYKLA = "dividendai.json"
 
 # --- scenarijus 1: kritimas ir apsisukimas ---
@@ -402,6 +410,10 @@ def scenarijus_1(langas, kd):
     # ir tas pats horizontas. Jei ir po ribojimo R:R < 1 - signalo nera,
     # ir tai padaro _bendra().
     R_pilnas = float(kd["virsune_n"])
+    if R_pilnas <= kaina:
+        return None      # buves lygis jau pasiektas - tikslo nebera. Tai ne
+                         # filtras, o aritmetika: kitaip kortele rodytu tiksla
+                         # ZEMIAU iejimo ir neigiama R:R.
     R = min(R_pilnas, kaina + HORIZONTAS_SESIJU * atr)
     sig = dict(scenarijus="Kritimas ir apsisukimas", tipas=1, ieina=kaina,
                tikslas=R, stop=L - S1_STOP_ATR * atr, R=R, L=L, atr_abs=atr,
@@ -413,7 +425,7 @@ def scenarijus_1(langas, kd):
     return sig
 
 
-def scenarijus_2(langas, kd):
+def scenarijus_2(langas, kd, iki_uzdarymo=None):
     """Naujienu tarpas + eiga. Tikslo nera, nesama slenkanciu stop'u."""
     if len(langas) < S2_ORB_BARU + 2:
         return None
@@ -441,9 +453,21 @@ def scenarijus_2(langas, kd):
         return None                       # tarpas jau buvo uzpildytas
 
     stop = max(orb_min, kaina - S2_TRAIL_ATR * atr)
+    # PROGRESAS. Tikslo nera, tad tai vertinimas is dvieju dedamuju, imant
+    # DIDESNE - kad juosta klystu i "veliau, nei manai" puse.
+    #   a) judesys nuo PROVERZIO lygio (orb_max), ne nuo sesijos atidarymo.
+    #      Nuo atidarymo buvo klaida: tarpo dienos atidarymas jau yra 1+ ATR
+    #      zemiau kainos, tad juosta is karto rodydavo 100% ir visos kortelės
+    #      kristu i "velyva stadija".
+    #   b) paros laikas: 10:00 prasidejes ralis turi visa diena, 16:00 - nebe.
+    prog_j = (kaina - orb_max) / max(1e-9, atr)
+    prog_l = 0.0
+    if iki_uzdarymo is not None:
+        viso = RINKOS["eu"]["uzdarymas"] - RINKOS["eu"]["atidarymas"]
+        prog_l = max(0.0, 1.0 - float(iki_uzdarymo) / max(1.0, viso))
     sig = dict(scenarijus="Naujienu tarpas ir eiga", tipas=2, ieina=kaina,
                tikslas=None, stop=stop, R=None, L=orb_min, atr_abs=atr,
-               progresas=min(1.0, (kaina - atid) / max(1e-9, atr)),
+               progresas=min(1.0, max(prog_j, prog_l)),
                progresas_tikslus=False, tarpas_atr=tarpas / atr,
                virsune_vertinimas=kaina + S2_TRAIL_ATR * atr)
     sig["kliutys"] = _bendra(sig, kd)
@@ -453,13 +477,14 @@ def scenarijus_2(langas, kd):
 _KLAIDOS = {}
 
 
-def aptikti(langas, kd):
+def aptikti(langas, kd, iki_uzdarymo=None):
     """Klaidos nebetylimos: anksciau `except: s = None` prarydavo VISKA, tad
     toks gedimas kaip visur-NaN apyv_santykis atrodydavo kaip "signalu nera"."""
     rez = []
     for f in (scenarijus_1, scenarijus_2):
         try:
-            s = f(langas, kd)
+            s = (f(langas, kd) if f is scenarijus_1
+                 else f(langas, kd, iki_uzdarymo))
         except Exception as e:
             raktas = f"{f.__name__}: {type(e).__name__}: {e}"
             _KLAIDOS[raktas] = _KLAIDOS.get(raktas, 0) + 1
@@ -631,7 +656,376 @@ def _kd(rod_t, ses):
         return None
 
 
+
+# ================================================================ puslapis
+
+PUSLAPIO_SABLONAS = r'''<!doctype html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="300">
+<title>Detektorius</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --txt:#14171a; --dim:#697583;
+  --ok:#1f9d55; --ok-bg:#eaf7ef; --blok:#b7791f; --blok-bg:#fdf6e7;
+  --velyva:#8a93a0; --juosta:#e8ebef; --acc:#2d6cdf;
+  --eu:#3b5bdb; --us:#0b7285;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1216; --card:#171b21; --line:#262c35; --txt:#e6e9ed; --dim:#95a0ae;
+  --ok:#3ddc84; --ok-bg:#12281c; --blok:#e0b341; --blok-bg:#2a2313;
+  --velyva:#6b7482; --juosta:#232932; --acc:#6ea8fe;
+  --eu:#7a90f0; --us:#4db8c9;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1216; --card:#171b21; --line:#262c35; --txt:#e6e9ed; --dim:#95a0ae;
+  --ok:#3ddc84; --ok-bg:#12281c; --blok:#e0b341; --blok-bg:#2a2313;
+  --velyva:#6b7482; --juosta:#232932; --acc:#6ea8fe;
+  --eu:#7a90f0; --us:#4db8c9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 64px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;
+  justify-content:space-between;margin-bottom:6px}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+.sub{color:var(--dim);font-size:13px}
+.zurnalas{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0 18px;padding:12px 14px;
+  background:var(--card);border:1px solid var(--line);border-radius:10px}
+.z div{font-size:12px;color:var(--dim)}
+.z b{display:block;font-size:17px;color:var(--txt);font-variant-numeric:tabular-nums}
+.valdymas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+button.f{background:var(--card);border:1px solid var(--line);color:var(--dim);
+  padding:6px 12px;border-radius:999px;font-size:13px;cursor:pointer}
+button.f[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);font-weight:600}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);
+  margin:26px 0 10px;font-weight:600}
+.tinkl{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.k{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--ok);
+  border-radius:10px;padding:13px 14px}
+.k.blok{border-left-color:var(--blok)}
+.k.velyva{opacity:.62;border-left-color:var(--velyva)}
+.vir{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.tick{font-weight:700;font-size:16px;letter-spacing:-.01em}
+.zenk{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;
+  border:1px solid currentColor;letter-spacing:.04em}
+.zenk.EU{color:var(--eu)} .zenk.JAV{color:var(--us)}
+.scen{color:var(--dim);font-size:12.5px;margin-bottom:10px}
+.juosta{height:8px;background:var(--juosta);border-radius:5px;overflow:hidden;margin:2px 0 4px}
+.uzp{height:100%;background:var(--ok);border-radius:5px}
+.k.blok .uzp{background:var(--blok)}
+.k.velyva .uzp{background:var(--velyva)}
+.uzp.vert{background:repeating-linear-gradient(90deg,var(--ok) 0 6px,transparent 6px 10px)}
+.k.blok .uzp.vert{background:repeating-linear-gradient(90deg,var(--blok) 0 6px,transparent 6px 10px)}
+.proc{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);
+  margin-bottom:10px;font-variant-numeric:tabular-nums}
+.kainos{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;
+  font-variant-numeric:tabular-nums;padding:8px 0;border-top:1px solid var(--line)}
+.kainos span{color:var(--dim);display:block;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.04em}
+.kainos b{font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.z2{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--juosta);
+  color:var(--dim);font-variant-numeric:tabular-nums}
+.z2.geras{background:var(--ok-bg);color:var(--ok);font-weight:600}
+.z2.kliutis{background:var(--blok-bg);color:var(--blok);font-weight:600}
+.tuscia{color:var(--dim);padding:28px 4px;font-size:14px}
+footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
+  border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:520px){.wrap{padding:16px 16px 48px}.tinkl{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Detektorius</h1>
+    <div class="sub" id="antraste">kraunama…</div>
+  </div>
+  <div class="sub" id="laikmatis"></div>
+</header>
+
+<div class="zurnalas z" id="zurnalas" hidden></div>
+
+<div class="valdymas">
+  <button class="f" id="f-visi" aria-pressed="false">Visi</button>
+  <button class="f" id="f-tinkami" aria-pressed="true">Tik be kliūčių</button>
+  <button class="f" id="f-eu" aria-pressed="true">EU</button>
+  <button class="f" id="f-us" aria-pressed="true">JAV</button>
+</div>
+
+<div id="turinys"></div>
+
+<footer>
+  Pozicija 18&nbsp;000&nbsp;€, sąnaudos 10&nbsp;€ už ciklą (lūžio taškas 0,0556&nbsp;%).
+  Horizontas 3 sesijos, pozicija nešama per naktį.<br>
+  Ištisinė juosta — tikslas struktūrinis (žinomas kainos lygis). Punktyrinė —
+  <b>vertinimas</b>: ralio tikslo nėra, rodoma, kiek nueita ATR vienetais.
+  Juostos spalva rodo kliūtis, ne progresą.<br>
+  Žurnalas: <a href="zurnalas.csv">zurnalas.csv</a> · duomenys:
+  <a href="detektorius.json">detektorius.json</a>
+</footer>
+</div>
+
+<script>
+const DUOM = __DUOM__;
+const B = {visi:false, tinkami:true, EU:true, JAV:true};
+let duom = DUOM;
+
+const PAV = {
+  "Kritimas ir apsisukimas":"Kritimas ir apsisukimas",
+  "Naujienu tarpas ir eiga":"Naujienų tarpas ir eiga"
+};
+const nr = (x,n=2)=> (x===null||x===undefined||x==='')?'–':Number(x).toFixed(n);
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function amzius(m){
+  m = Math.max(0, Math.round(m||0));
+  if (m < 60) return m + ' min';
+  return Math.floor(m/60) + ' val ' + (m%60) + ' min';
+}
+
+function kortele(s){
+  const blok = !s.tinkamas;
+  const p = Math.max(0, Math.min(1, Number(s.progresas)||0));
+  const velyva = p >= 0.8;
+  const tikslus = s.progresas_tikslus !== false;
+  const cls = ['k', blok?'blok':'', velyva?'velyva':''].filter(Boolean).join(' ');
+  const zenkl = [];
+  if (Number.isFinite(Number(s.rr)) && s.rr)
+    zenkl.push(`<span class="z2 ${Number(s.rr) >= 1 ? 'geras' : ''}">R:R ${nr(s.rr)}</span>`);
+  if (s.rizika_eur) zenkl.push(`<span class="z2">rizika ${Math.round(s.rizika_eur)} €</span>`);
+  if (s.atr_pct) zenkl.push(`<span class="z2">ATR ${nr(s.atr_pct,1)}%</span>`);
+  if (s.kritimas_atr) zenkl.push(`<span class="z2">krito ${nr(s.kritimas_atr,1)} ATR</span>`);
+  if (s.tarpas_atr) zenkl.push(`<span class="z2">tarpas ${nr(s.tarpas_atr,1)} ATR</span>`);
+  zenkl.push(`<span class="z2">${amzius(s.amzius_min)}</span>`);
+  if (s.tikslas_ribotas) zenkl.push(`<span class="z2">tikslas ribotas</span>`);
+  if (s.dividendas && s.dividendas.dienu_iki !== undefined && Math.abs(s.dividendas.dienu_iki) <= 7)
+    zenkl.push(`<span class="z2 kliutis">ex-div po ${s.dividendas.dienu_iki} d.</span>`);
+  (s.kliutys||[]).forEach(k => zenkl.push(`<span class="z2 kliutis">${esc(k)}</span>`));
+  return `<article class="${cls}">
+    <div class="vir"><span class="tick">${esc(s.tickeris)}</span>
+      <span class="zenk ${esc(s.rinka)}">${esc(s.rinka)}</span></div>
+    <div class="scen">${esc(PAV[s.scenarijus] || s.scenarijus)}</div>
+    <div class="juosta"><div class="uzp ${tikslus?'':'vert'}" style="width:${(p*100).toFixed(0)}%"></div></div>
+    <div class="proc"><span>${(p*100).toFixed(0)}%${tikslus?'':' · vertinimas'}</span>
+      <span>${velyva?'vėlyva':''}</span></div>
+    <div class="kainos">
+      <div><span>stop</span><b>${nr(s.stop)}</b></div>
+      <div><span>įeina</span><b>${nr(s.ieina)}</b></div>
+      <div><span>tikslas</span><b>${s.tikslas ? nr(s.tikslas) : '—'}</b></div>
+    </div>
+    <div class="meta">${zenkl.join('')}</div>
+  </article>`;
+}
+
+function piesti(){
+  const el = document.getElementById('turinys');
+  let sig = (duom.signalai||[]).filter(s => B[s.rinka] !== false);
+  if (!B.visi) sig = sig.filter(s => s.tinkamas);
+  sig.sort((a,b)=> (Number(b.progresas)||0) - (Number(a.progresas)||0));
+  const ankstyvi = sig.filter(s => (Number(s.progresas)||0) < 0.8);
+  const velyvi   = sig.filter(s => (Number(s.progresas)||0) >= 0.8);
+  let h = '';
+  if (!sig.length){
+    h = '<div class="tuscia">Šiuo metu nė vieno scenarijaus, atitinkančio pasirinkimą.' +
+        '<br>Puslapis persikrauna kas 5 min.</div>';
+  } else {
+    if (ankstyvi.length) h += `<h2>Aktyvūs · ${ankstyvi.length}</h2>
+      <div class="tinkl">${ankstyvi.map(kortele).join('')}</div>`;
+    if (velyvi.length) h += `<h2>Vėlyva stadija · ${velyvi.length}</h2>
+      <div class="tinkl">${velyvi.map(kortele).join('')}</div>`;
+  }
+  el.innerHTML = h;
+  const t = duom.atnaujinta ? new Date(duom.atnaujinta) : null;
+  document.getElementById('antraste').textContent =
+    (t ? 'atnaujinta ' + t.toLocaleTimeString('lt-LT',{hour:'2-digit',minute:'2-digit'}) : '') +
+    ` · rodoma ${sig.length} iš ${(duom.signalai||[]).length}`;
+}
+
+function zurnalas(z){
+  const el = document.getElementById('zurnalas');
+  if (!z || !z.signalu){ el.hidden = true; return; }
+  el.innerHTML = `
+    <div><span>signalų</span><b>${z.signalu}</b></div>
+    <div><span>atvirų</span><b>${z.atviru}</b></div>
+    <div><span>baigtų</span><b>${z.baigtu}</b></div>
+    <div><span>tikslas</span><b>${z.baigtu ? Math.round(z.tikslo_dalis)+'%' : '–'}</b></div>
+    <div><span>vid. rezultatas</span><b>${z.vid_eur===null?'–':(z.vid_eur>=0?'+':'')+Math.round(z.vid_eur)+' €'}</b></div>`;
+  el.hidden = false;
+}
+
+for (const [id,key] of [['f-visi','visi'],['f-tinkami','tinkami'],['f-eu','EU'],['f-us','JAV']]){
+  const b = document.getElementById(id);
+  b.addEventListener('click', ()=>{
+    if (key === 'visi' || key === 'tinkami'){
+      B.visi = (key === 'visi');
+      document.getElementById('f-visi').setAttribute('aria-pressed', B.visi);
+      document.getElementById('f-tinkami').setAttribute('aria-pressed', !B.visi);
+    } else { B[key] = !B[key]; b.setAttribute('aria-pressed', B[key]); }
+    piesti();
+  });
+}
+
+let liko = 300;
+setInterval(()=>{
+  liko--;
+  document.getElementById('laikmatis').textContent =
+    'atnaujinimas po ' + Math.floor(liko/60) + ':' + String(Math.max(0,liko)%60).padStart(2,'0');
+}, 1000);
+
+piesti();
+zurnalas(DUOM.zurnalas);
+</script>
+</body>
+</html>
+'''
+
+
+def zurnalo_santrauka(z):
+    uzd = [r for r in z.values() if str(r.get("baigtis") or "")]
+    eur = []
+    for r in uzd:
+        try:
+            eur.append(float(r["eur"]))
+        except Exception:
+            pass
+    return dict(signalu=len(z), atviru=len(z) - len(uzd), baigtu=len(uzd),
+                tikslo_dalis=(100.0 * sum(1 for r in uzd
+                                          if r.get("baigtis") == "tikslas") / len(uzd))
+                if uzd else 0.0,
+                vid_eur=(sum(eur) / len(eur)) if eur else None)
+
+
+def puslapis_html(eilutes, z):
+    """Puslapi generuoja PATS detektorius, kaip ir senasis dip_reitingas.py.
+
+    Duomenys ikepami i faila, ne siunciami fetch'u: GitHub Pages atiduoda
+    viena statini faila, be papildomu uzklausu ir be talpyklos netikrumo.
+    Atnaujinimas - meta refresh kas 5 min, t. y. tiksliai tuo ritmu, kuriuo
+    workflow perrasO faila.
+    """
+    duom = dict(atnaujinta=datetime.now(timezone.utc).isoformat(),
+                signalai=eilutes, zurnalas=zurnalo_santrauka(z))
+    return PUSLAPIO_SABLONAS.replace(
+        "__DUOM__", json.dumps(duom, ensure_ascii=False, default=str))
+
 # ================================================================ live
+
+def zurnalas_ikelti():
+    if not os.path.exists(ZURNALAS):
+        return {}
+    try:
+        df = pd.read_csv(ZURNALAS, dtype=str, keep_default_na=False)
+        return {str(r["raktas"]): dict(r) for _, r in df.iterrows()}
+    except Exception as e:
+        print(f"  zurnalo nuskaityti nepavyko ({e}) - pradedamas naujas")
+        return {}
+
+
+def barai_signalams(z, eilutes, visi_barai):
+    """Kiekvienam ATVIRAM zurnalo signalui - barai NUO jo gimimo iki dabar.
+
+    Tai ta pati lentele, kuria kalibracijoje gauna baigtis(): bareliai po
+    iejimo baro. Todel zurnalas ir kalibracija matuoja identiskai.
+    """
+    gimimai = {f"{e['rinka']}|{e['tickeris']}|{e['tipas']}|{e['sesija_data']}":
+               e.get("pirmas_kartas", e["laikas"]) for e in eilutes}
+    out = {}
+    for raktas, r in list(z.items()) + [(k, dict(gimimas=v, baigtis=""))
+                                        for k, v in gimimai.items()]:
+        if raktas in out or str(r.get("baigtis") or ""):
+            continue
+        dalys = raktas.split("|")
+        if len(dalys) != 4:
+            continue
+        d = visi_barai.get((dalys[0], dalys[1]))
+        if d is None:
+            continue
+        try:
+            nuo = pd.Timestamp(str(r["gimimas"]))
+            po = d[d.index > nuo]
+        except Exception:
+            continue
+        if len(po):
+            out[raktas] = po
+    return out
+
+
+def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
+    """Pirmyneiginis testas: viena eilute vienam signalui, atnaujinama kas 5 min.
+
+    Baigtis skaiciuojama TA PACIA baigtis() funkcija, kaip ir kalibracijoje.
+    Jei zurnalas turetu savo isejimo logika, gautume tiksliai ta klaida, kuri
+    sitame projekte kartojosi keturis kartus: modulis skaiciuoja viena, testas
+    kita. Todel cia nera NE VIENOS savos taisykles.
+    """
+    z = zurnalas_ikelti()
+    dabar = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    for e in eilutes:
+        raktas = f"{e['rinka']}|{e['tickeris']}|{e['tipas']}|{e['sesija_data']}"
+        if raktas not in z:
+            z[raktas] = dict(
+                raktas=raktas, gimimas=e["laikas"], rinka=e["rinka"],
+                tickeris=e["tickeris"], scenarijus=e["scenarijus"],
+                tipas=e["tipas"], sesija=e["sesija_data"],
+                ieina=round(e["ieina"], 4), tikslas=e.get("tikslas"),
+                stop=round(e["stop"], 4), rr=(round(e["rr"], 2) if np.isfinite(e.get("rr", np.nan)) else ""),
+                rizika_eur=round(e.get("rizika_eur", float("nan")), 1),
+                atr_pct=round(e.get("atr_pct", float("nan")), 2),
+                tinkamas=bool(e["tinkamas"]),
+                kliutys="; ".join(e["kliutys"]),
+                paskut_laikas="", paskut_kaina="", mfe_pct="", mae_pct="",
+                baigtis="", pelnas_pct="", eur="", minuciu="")
+
+    # atviros eilutes: perskaiciuojam ta pacia baigtis() funkcija
+    for raktas, r in z.items():
+        if str(r.get("baigtis") or ""):
+            continue
+        toliau = barai_pagal_rakta.get(raktas)
+        if toliau is None or not len(toliau):
+            continue
+        sig = dict(tipas=int(r["tipas"]), ieina=float(r["ieina"]),
+                   tikslas=(float(r["tikslas"])
+                            if str(r.get("tikslas") or "") not in ("", "nan")
+                            else None),
+                   stop=float(r["stop"]),
+                   atr_abs=float(r["atr_pct"]) / 100.0 * float(r["ieina"]))
+        b = baigtis(toliau, sig)
+        r["paskut_laikas"] = dabar
+        r["paskut_kaina"] = round(float(toliau["Close"].iloc[-1]), 4)
+        r["mfe_pct"] = round(b["mfe_pct"], 3)
+        r["mae_pct"] = round(b["mae_pct"], 3)
+        # uzdarom TIK tada, kai tikrai issisprende. "laikas" gyvai reiskia
+        # tik tai, kad kol kas neissisprende - horizontas dar nesibaige.
+        if b["baigtis"] in ("stop", "tikslas"):
+            r["baigtis"] = b["baigtis"]
+            r["pelnas_pct"] = round(b["pelnas_pct"], 3)
+            r["eur"] = round(b["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR, 1)
+            r["minuciu"] = b["minuciu"]
+        else:
+            try:
+                nuo = datetime.fromisoformat(str(r["sesija"])).date()
+                praejo = len(pd.bdate_range(nuo, datetime.now().date())) - 1
+            except Exception:
+                praejo = 0
+            if praejo >= HORIZONTAS_SESIJU:
+                r["baigtis"] = "laikas"
+                r["pelnas_pct"] = round(b["pelnas_pct"], 3)
+                r["eur"] = round(b["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR, 1)
+                r["minuciu"] = b["minuciu"]
+
+    os.makedirs(os.path.dirname(ZURNALAS), exist_ok=True)
+    pd.DataFrame(list(z.values()), columns=ZURNALO_STULPELIAI).to_csv(
+        ZURNALAS, index=False)
+    atviros = sum(1 for r in z.values() if not str(r.get("baigtis") or ""))
+    print(f"  zurnalas: {len(z)} eiluciu ({atviros} atviros)")
+    return z
+
 
 def atkurti(s, sena, kd, kaina):
     """Atstato signala is busenos ir PERSKAICIUOJA viska, kas nuo jos priklauso.
@@ -659,11 +1053,13 @@ def atkurti(s, sena, kd, kaina):
 def paleisti_live(rinkos):
     busena = ikelti_busena()
     eilutes = []
+    visi_barai = {}          # (zyme, tickeris) -> visi turimi 5 min barai
     for rinka in rinkos:
         zyme = RINKOS[rinka]["zyme"]
         rod, barai = parsisiusti(rinka, LIVE_DIENOS)
         div = dividendu_kalendorius(list(barai))
         for t, d in barai.items():
+            visi_barai[(zyme, t)] = d
             ses = d["sesija"].iloc[-1]
             sesija = d[d["sesija"] == ses]
             if len(sesija) < S2_ORB_BARU + 4:
@@ -671,7 +1067,8 @@ def paleisti_live(rinkos):
             kd = _kd(rod[t], ses)
             if kd is None:
                 continue
-            for s in aptikti(sesija, kd):
+            iki = (RINKOS[rinka]["uzdarymas"] - int(sesija["minute"].iloc[-1]))
+            for s in aptikti(sesija, kd, iki):
                 raktas = f"{zyme}|{t}|{s['tipas']}|{ses}"
                 dabar = str(d.index[-1])
                 sena = busena.get(raktas)
@@ -687,6 +1084,7 @@ def paleisti_live(rinkos):
                 except Exception:
                     amz = 0
                 s.update(rinka=zyme, tickeris=t, laikas=dabar,
+                         sesija_data=str(ses),
                          atr_pct=float(kd["atr_pct"]), amzius_min=amz,
                          dividendas=div.get(t))
                 eilutes.append(s)
@@ -703,6 +1101,11 @@ def paleisti_live(rinkos):
         for k, n in sorted(_KLAIDOS.items(), key=lambda x: -x[1])[:5]:
             print(f"    {n:>6}x  {k}")
         _KLAIDOS.clear()
+    z = zurnalas_atnaujinti(eilutes, barai_signalams(zurnalas_ikelti(), eilutes,
+                                                     visi_barai))
+    with open("docs/index.html", "w", encoding="utf-8") as f:
+        f.write(puslapis_html(eilutes, z))
+    print(f"  puslapis: docs/index.html ({len(eilutes)} korteliu)")
     tinkami = [e for e in eilutes if e["tinkamas"]]
     print(f"\n  aktyvus: {len(eilutes)}  (tinkami: {len(tinkami)})")
     for e in sorted(tinkami, key=lambda x: -x["progresas"]):
@@ -730,7 +1133,8 @@ def paleisti_kalibracija(rinkos, dienos):
                     continue
                 suveike = set()
                 for i in range(S2_ORB_BARU + 1, len(sd)):
-                    for s in aptikti(sd.iloc[:i + 1], kd):
+                    iki = (RINKOS[rinka]["uzdarymas"] - int(sd["minute"].iloc[i]))
+                    for s in aptikti(sd.iloc[:i + 1], kd, iki):
                         if s["tipas"] in suveike or not s["tinkamas"]:
                             continue
                         suveike.add(s["tipas"])
@@ -1085,6 +1489,23 @@ def savitikra():
 
     tikrinti("tuscias horizontas duoda 'laikas', ne atskira baigti",
              baigtis(bb([]).iloc[:0], s1f)["baigtis"], "laikas")
+
+    # --- tikslas negali buti zemiau iejimo -------------------------------
+    k_zem = kd(128.32, 3.0, 131.00, 0.17, 127.50)   # 5 d. virsune tik 131.00
+    aukstai = sesija(133.00, np.r_[np.full(6, -0.001), np.full(24, 0.0012)])
+    tikrinti("kai kaina jau virs buvusio lygio - signalo NERA (ne neigiamas R:R)",
+             pirmas_signalas(scenarijus_1, aukstai, k_zem) is None, True)
+
+    # --- zurnalas: tuscia reiksme is CSV neturi reiksti "uzdaryta" -------
+    import io
+    tst = pd.DataFrame([dict(raktas="EU|X|1|2026-09-25", baigtis="",
+                             tikslas="", rr="")])
+    buf = io.StringIO()
+    tst.to_csv(buf, index=False)
+    atgal = pd.read_csv(io.StringIO(buf.getvalue()), dtype=str,
+                        keep_default_na=False)
+    tikrinti("zurnalo tuscia 'baigtis' nuskaitoma kaip tuscia, ne kaip nan",
+             str(atgal["baigtis"].iloc[0] or ""), "")
 
     print("-" * 60)
     print("SAVITIKRA: " + ("VISKAS GERAI" if ok else "YRA KLAIDU"))
