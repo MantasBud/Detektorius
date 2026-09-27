@@ -834,12 +834,8 @@ function kortele(s){
   const zenkl = [];
   if (s.atr_pct) zenkl.push(`<span class="z2">ATR ${nr(s.atr_pct,1)}%</span>`);
   if (s.kritimas_atr) zenkl.push(`<span class="z2">krito ${nr(s.kritimas_atr,1)} ATR</span>`);
-  if (s.kelias_atr) zenkl.push(`<span class="z2 ${Number(s.kelias_atr) < 1 ? 'kliutis' : ''}">iki lygio ${nr(s.kelias_atr,1)} ATR</span>`);
-  if (s.atsiemimas_atr !== undefined && s.atsiemimas_atr !== null)
-    zenkl.push(`<span class="z2 ${Number(s.atsiemimas_atr) < 0.25 ? 'kliutis' : ''}">atsiėmė ${nr(s.atsiemimas_atr,2)} ATR</span>`);
   if (s.tarpas_atr) zenkl.push(`<span class="z2">tarpas ${nr(s.tarpas_atr,1)} ATR</span>`);
   zenkl.push(`<span class="z2">signalo amžius ${amzius(s.amzius_min)}</span>`);
-  if (s.tikslas_ribotas) zenkl.push(`<span class="z2">tikslas ribotas</span>`);
   if (s.dividendas && s.dividendas.dienu_iki !== undefined && Math.abs(s.dividendas.dienu_iki) <= 7)
     zenkl.push(`<span class="z2 kliutis">ex-div po ${s.dividendas.dienu_iki} d.</span>`);
   (s.kliutys||[]).forEach(k => zenkl.push(`<span class="z2 kliutis">${esc(k)}</span>`));
