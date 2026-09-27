@@ -94,7 +94,9 @@ Paleidimas:
 
 import argparse
 import json
+import math
 import os
+import shutil
 import sys
 import tempfile
 import warnings
@@ -820,9 +822,31 @@ def baigtis(toliau, sig):
         # anapus tikslo, ir tada vykdymas yra ties atidarymu. Be sios tvarkos
         # baras O=115 (virs tikslo 110) su veliau L=95 buvo uzskaitomas kaip
         # stop -2%, nors pozicijos tuo metu jau seniai nebuvo.
-        mae = min(mae, (lo / ieina - 1) * 100)
-        if (hi / ieina - 1) * 100 > mfe:
-            mfe, mfe_i = (hi / ieina - 1) * 100, j + 1
+        # MFE/MAE tik IKI isejimo. Anksciau jie buvo atnaujinami is viso
+        # baro diapazono PRIES tarpo patikras, tad tarpo bare i MFE patekdavo
+        # judesys, ivykes jau po to, kai pozicijos nebebuvo: O=115 prie
+        # tikslo 110 duodavo mfe +16%, nors realus isejimas +15%.
+        iseina = None
+        if op <= stop:
+            iseina = op
+        elif tikslas and op >= tikslas:
+            iseina = op
+        elif lo <= stop:
+            iseina = stop
+        elif tikslas and hi >= tikslas:
+            iseina = tikslas
+        if iseina is not None:
+            # Isejimo bare nezinome judesiu eiles bare, tad i MFE/MAE
+            # iskaitom tik pacia isejimo kaina. Anksciau buvo imamas visas
+            # baro diapazonas, todel i MFE patekdavo judesys, ivykes jau po
+            # to, kai pozicijos nebebuvo (baras [99, 108, 97, 98.5] prie
+            # stop'o 98 duodavo mfe +8%, nors isejimas buvo -2%).
+            v = (iseina / ieina - 1) * 100
+            mae, mfe = min(mae, v), max(mfe, v)
+        else:
+            mae = min(mae, (lo / ieina - 1) * 100)
+            if (hi / ieina - 1) * 100 > mfe:
+                mfe, mfe_i = (hi / ieina - 1) * 100, j + 1
         if op <= stop:
             return dict(baigtis="stop", pelnas_pct=(op / ieina - 1) * 100,
                         minuciu=(j + 1) * BARAS_MIN, mfe_pct=mfe, mae_pct=mae,
@@ -1054,7 +1078,7 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 <div id="turinys"></div>
 
 <footer>
-  Pozicija 18&nbsp;000&nbsp;€, sąnaudos 10&nbsp;€ už ciklą (lūžio taškas 0,0556&nbsp;%).
+  Pozicija 18&nbsp;000&nbsp;€. Sąnaudos: EU 10&nbsp;€ (lūžio taškas 0,0556&nbsp;%), JAV 5&nbsp;€ (0,0278&nbsp;%).
   Horizontas 3 sesijos, pozicija nešama per naktį.<br>
   Žurnalas: <a href="zurnalas.csv">zurnalas.csv</a> · duomenys:
   <a href="detektorius.json">detektorius.json</a>
@@ -1186,19 +1210,56 @@ zurnalas(DUOM.zurnalas);
 '''
 
 
+def _tinkama(r):
+    """Ar zurnalo eilute yra SVARUS signalas (be kliuciu)."""
+    v = r.get("tinkamas", True)
+    if isinstance(v, str):
+        return v.strip().lower() in ("true", "1", "yes", "")
+    return bool(v)
+
+
 def zurnalo_santrauka(z):
-    uzd = [r for r in z.values() if str(r.get("baigtis") or "")]
+    """Santrauka skaiciuojama TIK is tinkamu signalu.
+
+    Zurnale sedi ir blokuoti signalai - tycia, kad matytusi, ka kliutys
+    ismete. Bet puslapio antraste buvo skaiciuojama is VISU eiluciu, o
+    kalibracija matuoja tik tinkamus, tad du skaiciai apie ta pati dalyka
+    niekada nesutapdavo (2026-09-28 nepriklausoma perziura).
+    """
+    sv = {k: r for k, r in z.items() if _tinkama(r)}
+    # "duomenu nera" nera baigtis - tai eilute, kuriai pritruko duomenu.
+    # I pataikymo dali jos iskaityti negalima nei i skaitikli, nei i vardikli.
+    BAIGTYS = ("stop", "tikslas", "laikas")
+    uzd = [r for r in sv.values() if str(r.get("baigtis") or "") in BAIGTYS]
+    be_duomenu = sum(1 for r in sv.values()
+                     if str(r.get("baigtis") or "") == "duomenu nera")
     eur = []
     for r in uzd:
         try:
             eur.append(float(r["eur"]))
         except Exception:
             pass
-    return dict(signalu=len(z), atviru=len(z) - len(uzd), baigtu=len(uzd),
+    return dict(signalu=len(sv), atviru=len(sv) - len(uzd) - be_duomenu,
+                baigtu=len(uzd),
                 tikslo_dalis=(100.0 * sum(1 for r in uzd
                                           if r.get("baigtis") == "tikslas") / len(uzd))
                 if uzd else 0.0,
                 vid_eur=(sum(eur) / len(eur)) if eur else None)
+
+
+def _be_nan(o):
+    """NaN/Inf -> None. JSON ju neturi, o musu laukai (fonas, ataskaitos)
+    teisetai buna NaN."""
+    if isinstance(o, dict):
+        return {k: _be_nan(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_be_nan(v) for v in o]
+    if isinstance(o, float) and not math.isfinite(o):
+        return None
+    if isinstance(o, (np.floating, np.integer)):
+        v = float(o)
+        return v if math.isfinite(v) else None
+    return o
 
 
 def puslapis_html(eilutes, z):
@@ -1214,7 +1275,7 @@ def puslapis_html(eilutes, z):
     # < > & pabegami i \u00xx: kitaip laukas su "</script>" isardytu puslapi.
     # json.dumps ju NEekranuoja, ir pirmoji savitikros versija to nepagavo,
     # nes pati skaldydavo teksta ties tuo paciu "</script>".
-    js = (json.dumps(duom, ensure_ascii=False, default=str)
+    js = (json.dumps(_be_nan(duom), ensure_ascii=False, default=str)
           .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026"))
     return PUSLAPIO_SABLONAS.replace("__DUOM__", js)
 
@@ -1247,8 +1308,17 @@ def zurnalas_ikelti():
         df = pd.read_csv(ZURNALAS, dtype=str, keep_default_na=False)
         return {str(r["raktas"]): dict(r) for _, r in df.iterrows()}
     except Exception as e:
-        print(f"  zurnalo nuskaityti nepavyko ({e}) - pradedamas naujas")
-        return {}
+        # NIEKADA negrazinam tuscio zodyno: _zurnalo_irasyti() tada perrasytu
+        # faila viena paleidimo eilute, ir visas pirmyneiginis testas dingtu
+        # del vienos sugadintos eilutes. Kopijuojam sugadinta faila ir
+        # nutraukiam - geriau nutruke darbai, nei tyliai dingusi istorija.
+        atsarga = ZURNALAS + ".sugadintas"
+        try:
+            shutil.copyfile(ZURNALAS, atsarga)
+        except Exception:
+            atsarga = "(kopijos padaryti nepavyko)"
+        sys.exit(f"NUTRAUKTA: zurnalo nuskaityti nepavyko ({e}). "
+                 f"Failas nepaliestas, kopija: {atsarga}")
 
 
 def barai_signalams(z, eilutes, visi_barai):
@@ -1277,7 +1347,14 @@ def barai_signalams(z, eilutes, visi_barai):
             # kalibracija. Be sito zurnalas ir kalibracija matuoja skirtingus
             # dalykus, ir zurnalas - pirmyneiginis testas - butu sistemingai
             # pesimistiskesnis uz ji.
-            ses = sorted(set(po["sesija"]))[:HORIZONTAS_SESIJU]
+            # Kalibracija duoda: likusius GIMIMO sesijos barus + dar
+            # (HORIZONTAS_SESIJU - 1) sesijas. Jei signalas gime paskutiniame
+            # sesijos bare, gimimo sesija duoda 0 baru, ir paprastas
+            # "pirmos 3 sesijos" pjuvis duodavo 3 PILNAS sesijas vietoj 2 -
+            # tas pats signalas zurnale +458.7 EUR, kalibracijoje +309.6.
+            gim_ses = pd.Timestamp(str(r["gimimas"])).date()
+            kiek = HORIZONTAS_SESIJU - (0 if gim_ses in set(po["sesija"]) else 1)
+            ses = sorted(set(po["sesija"]))[:max(1, kiek)]
             po = po[po["sesija"].isin(ses)]
         except Exception:
             continue
@@ -1321,6 +1398,10 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
             continue
         toliau = barai_pagal_rakta.get(raktas)
         if toliau is None or not len(toliau):
+            # Baru gali nebuti: skenuota tik viena rinka, tikeris iskrito is
+            # universo, duomenu skyle. Anksciau tokia eilute likdavo ATVIRA
+            # amzinai ir kaupdavosi puslapio "atvirų" skaitiklyje.
+            _uzdaryti_pagal_laika(r, dabar)
             continue
         try:
             sig = _zurnalo_sig(r)
@@ -1380,6 +1461,18 @@ def _zurnalo_eilute(r, toliau, sig, dabar):
                                         # laikom amzinai atvira
     if praejo >= HORIZONTAS_SESIJU:
         uzdaryti("laikas")
+
+
+def _uzdaryti_pagal_laika(r, dabar):
+    """Uzdaro eilute, kuriai nebegauname baru, kai horizontas jau praejo."""
+    try:
+        nuo = datetime.fromisoformat(str(r["sesija"])).date()
+        praejo = len(pd.bdate_range(nuo, datetime.now().date())) - 1
+    except Exception:
+        praejo = HORIZONTAS_SESIJU
+    if praejo >= HORIZONTAS_SESIJU:
+        r["baigtis"] = "duomenu nera"
+        r["paskut_laikas"] = dabar
 
 
 def _zurnalo_irasyti(z):
@@ -1487,9 +1580,12 @@ def paleisti_live(rinkos):
                       if k.endswith(naujausia)})
     os.makedirs("docs", exist_ok=True)
     with open("docs/detektorius.json", "w", encoding="utf-8") as f:
+        # allow_nan=False: NaN nera JSON. Puslapis islikdavo tik todel, kad
+        # jame duomenys yra JS literalas, kur NaN legalus - bet paskelbtas
+        # docs/detektorius.json buvo neisparsinamas (jq, JSON.parse).
         json.dump(dict(atnaujinta=datetime.now(timezone.utc).isoformat(),
-                       signalai=eilutes), f, ensure_ascii=False, indent=1,
-                  default=str)
+                       signalai=_be_nan(eilutes)), f, ensure_ascii=False,
+                  indent=1, default=str, allow_nan=False)
     if _KLAIDOS:
         print("\n  SCENARIJU KLAIDOS:")
         for k, n in sorted(_KLAIDOS.items(), key=lambda x: -x[1])[:5]:
@@ -1530,7 +1626,12 @@ def paleisti_kalibracija(rinkos, dienos):
                 if kd is None:
                     continue
                 suveike = set()
-                for i in range(S2_ORB_BARU + 1, len(sd)):
+                # PRADZIA turi sutapti su live: live reikalauja
+                # len(sesija) >= S2_ORB_BARU + 4 ir vertina PASKUTINI bara,
+                # t.y. anksciausias pasiekiamas indeksas yra S2_ORB_BARU + 3.
+                # Kalibracija pradejo nuo +1, tad matavo du iejimus per
+                # sesija, kuriu saskaita niekada negautu.
+                for i in range(S2_ORB_BARU + 3, len(sd)):
                     iki = (RINKOS[rinka]["uzdarymas"] - int(sd["minute"].iloc[i]))
                     for s in aptikti(sd.iloc[:i + 1], kd, iki, rinka):
                         if s["tipas"] in suveike or not s["tinkamas"]:
@@ -1689,7 +1790,11 @@ def pjuviai(df, tik_kandidatai=False):
     """
     print("\n  KANDIDATAI I FILTRUS (nieko neblokuoja - tik matoma)")
     KAND = ("rinkos_pokytis", "platumas", "plat_d30", "santykinis",
-            "atsiemimas_atr", "baru_nuo_dugno", "nesekmes", "iki_ataskaitos")
+            "atsiemimas_atr", "baru_nuo_dugno", "nesekmes")
+    # iki_ataskaitos CIA NERA tycia: kalendorius paimamas SIANDIEN ir
+    # taikomas visoms praeities sesijoms, o [-12:] dar ir nukerpa datas.
+    # Vadinasi, praeityje jis "zinojo" tai, ko tuo metu nebuvo. Pjuvis
+    # spausdinamas, bet filtru tapti negali, kol nebus datu su laiko zyme.
     df = df.copy()
     df["eur"] = _eur(df)
     df["valanda"] = (df["minute"] // 60) if "minute" in df else np.nan
@@ -2491,6 +2596,82 @@ def savitikra():
         globals()["KURSO_TALPYKLA"] = tikras_kelias2
         _KURSAS.clear()
         _KURSAS["v"] = 1.10
+
+    # --- ZURNALAS: iki 2026-09-28 savitikra jo NEKVIETE is viso ----------
+    # Nepriklausoma perziura parode, kad galima buvo sanaudas PRIDETI vietoj
+    # atimti, arba laikyti pozicija 8 sesijas, ir savitikra liktu zalia.
+    zbar = bb([[100.0, 100.4, 99.6, 100.2], [100.2, 101.6, 100.0, 101.4]])
+    zsig = dict(tipas=1, ieina=100.0, tikslas=101.0, stop=99.0, atr_abs=2.0,
+                L=99.5)
+    zr = dict(raktas="EU|X|1|2026-07-24", sesija="2026-07-24", rinka="EU",
+              sanaudos=10.0, baigtis="")
+    _zurnalo_eilute(zr, zbar, zsig, "dabar")
+    tikrinti("zurnalas: tikslas 101.0 nuo 100.0 = +1% -> 180 - 10 = 170 EUR",
+             zr["eur"], 170.0)
+    zr2 = dict(zr, sanaudos=5.0, baigtis="")
+    _zurnalo_eilute(zr2, zbar, zsig, "dabar")
+    tikrinti("        ir JAV sanaudomis (5 EUR) -> 175 EUR", zr2["eur"], 175.0)
+    tikrinti("        sanaudos ATIMAMOS, ne pridedamos", zr2["eur"] < 180, True)
+
+    # neissisprendusi eilute: uzdaroma TIK praejus horizontui
+    zlaik = bb([[100.0, 100.4, 99.6, 100.1]])
+    šian = datetime.now().date()
+    zr3 = dict(raktas="EU|X|1", sesija=str(šian), rinka="EU", sanaudos=10.0,
+               baigtis="")
+    _zurnalo_eilute(zr3, zlaik, zsig, "dabar")
+    tikrinti("zurnalas: ta pacia diena eilute LIEKA atvira",
+             str(zr3.get("baigtis") or ""), "")
+    sena = šian - timedelta(days=10)
+    zr4 = dict(zr3, sesija=str(sena), baigtis="")
+    _zurnalo_eilute(zr4, zlaik, zsig, "dabar")
+    tikrinti("zurnalas: praejus horizontui uzdaroma kaip 'laikas'",
+             zr4.get("baigtis"), "laikas")
+
+    # eilute be baru neturi likti atvira amzinai
+    zr5 = dict(raktas="JAV|Y|1|x", sesija=str(sena), rinka="JAV", baigtis="")
+    _uzdaryti_pagal_laika(zr5, "dabar")
+    tikrinti("zurnalas: eilute be baru uzdaroma kaip 'duomenu nera'",
+             zr5.get("baigtis"), "duomenu nera")
+
+    # santrauka: blokuoti signalai i skaicius NEPATENKA
+    zz = {"a": dict(tinkamas=True, baigtis="tikslas", eur=170.0),
+          "b": dict(tinkamas=False, baigtis="stop", eur=-370.0),
+          "c": dict(tinkamas=False, baigtis="stop", eur=-370.0),
+          "d": dict(tinkamas=True, baigtis="duomenu nera", eur="")}
+    st = zurnalo_santrauka(zz)
+    tikrinti("santrauka: blokuoti signalai neiskaitomi",
+             (st["signalu"], st["baigtu"], round(st["tikslo_dalis"]),
+              round(st["vid_eur"])), (2, 1, 100, 170))
+    tikrinti("santrauka: 'duomenu nera' nei atvira, nei baigta",
+             st["atviru"], 0)
+
+    # baras, apimantis IR stop'a, IR tiksla -> stop (uzrasyta taisykle)
+    abu = bb([[100.0, 111.0, 97.0, 105.0]])
+    tikrinti("baras su stop'u IR tikslu uzskaitomas kaip stop",
+             baigtis(abu, zsig)["baigtis"], "stop")
+    ba = baigtis(abu, zsig)
+    tikrinti("        MFE lieka 0 (pelno taip ir nebuvo), o ne +11%",
+             (round(ba["mfe_pct"], 2), round(ba["mae_pct"], 2)), (0.0, -1.0))
+    tarp_t = bb([[115.0, 116.0, 114.0, 115.5]])
+    bt = baigtis(tarp_t, zsig)
+    tikrinti("tarpas virs tikslo: MFE = isejimo kaina, ne baro virsune",
+             (round(bt["pelnas_pct"], 2), round(bt["mfe_pct"], 2)),
+             (15.0, 15.0))
+
+    # kalibracijos pradzios baras = anksciausias, kuri pasiekia live
+    tikrinti("kalibracija pradeda ten, kur live gali (S2_ORB_BARU + 3)",
+             f"range(S2_ORB_BARU + 3, len(sd))" in
+             inspect.getsource(paleisti_kalibracija), True)
+    tikrinti("        ir live vartai yra S2_ORB_BARU + 4 baru",
+             "S2_ORB_BARU + 4" in inspect.getsource(paleisti_live), True)
+
+    # JSON be NaN
+    _pl = inspect.getsource(paleisti_live)
+    tikrinti("JSON: rasymo kelias naudoja allow_nan=False ir _be_nan",
+             ("allow_nan=False" in _pl) and ("_be_nan(eilutes)" in _pl), True)
+    tikrinti("JSON: NaN pakeiciamas i None",
+             _be_nan(dict(a=float("nan"), b=[1.0, float("inf")], c=2.0)),
+             dict(a=None, b=[1.0, None], c=2.0))
 
     ses_t = date(2026, 7, 24)
     tikrinti("iki ataskaitos: rytojaus ataskaita -> +1",
