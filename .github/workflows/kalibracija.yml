@@ -28,6 +28,13 @@ jobs:
           test -f detektorius.py || (echo "KLAIDA - detektorius.py nerastas" && exit 1)
           test -f universas.py  || (echo "KLAIDA - universas.py nerastas"  && exit 1)
 
+      # Savitikra pirma: ji veikia be tinklo per kelias sekundes ir tikrina,
+      # ar scenarijai vis dar pagauna Manto etalonus (SAP 07-24, ADYEN 08-13)
+      # ir ar nepersidengia. Jei kas nors pagedo, nutrūksta cia, o ne po
+      # 80 minuciu kalibracijos.
+      - name: Savitikra
+        run: python detektorius.py --savitikra
+
       - name: Kalibracija
         run: python detektorius.py --kalibracija --rinka abi --dienos "$D" | tee kalibracija.txt
 
