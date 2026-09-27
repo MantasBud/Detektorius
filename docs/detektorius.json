@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-09-27T21:37:50.607986+00:00",
+ "atnaujinta": "2026-09-27T22:28:13.731753+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -14,6 +14,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.3744383302544603,
    "atsiemimas_atr": 1.1175329161746186,
+   "baru_nuo_dugno": 101,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 43.95000076293945,
    "tikslas_ribotas": false,
@@ -27,6 +29,10 @@
    ],
    "tinkamas": false,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 0.9874488117618596,
    "rinka": "EU",
    "tickeris": "ABN.AS",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -37,7 +43,8 @@
     "kita_ex": "2027-01-26",
     "suma": 0.68,
     "dienu_iki": 121
-   }
+   },
+   "iki_ataskaitos": -45
   },
   {
    "scenarijus": "Atsistatymas",
@@ -52,6 +59,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.9147226337335401,
    "atsiemimas_atr": 1.0555105716534636,
+   "baru_nuo_dugno": 96,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 903.0,
    "tikslas_ribotas": true,
@@ -62,13 +71,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 3.1559218615887397,
    "rinka": "EU",
    "tickeris": "ADYEN.AS",
    "laikas": "2026-09-25 17:25:00+02:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 3.6840541728799274,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 139
   },
   {
    "scenarijus": "Atsistatymas",
@@ -83,6 +97,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.0484238054872697,
    "atsiemimas_atr": 0.35539916398598304,
+   "baru_nuo_dugno": 101,
+   "nesekmes": 2,
    "silpnas_atsiemimas": false,
    "R_pilnas": 16.434999465942383,
    "tikslas_ribotas": true,
@@ -93,6 +109,10 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 1.004085084364037,
    "rinka": "EU",
    "tickeris": "CA.PA",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -103,7 +123,8 @@
     "kita_ex": "2027-07-27",
     "suma": 0.21,
     "dienu_iki": 303
-   }
+   },
+   "iki_ataskaitos": 144
   },
   {
    "scenarijus": "Atsistatymas",
@@ -118,6 +139,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 2.0112766555876775,
    "atsiemimas_atr": 0.8834569314969973,
+   "baru_nuo_dugno": 87,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 58.619998931884766,
    "tikslas_ribotas": true,
@@ -128,6 +151,10 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 0.8713625714659279,
    "rinka": "EU",
    "tickeris": "DHL.DE",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -138,7 +165,8 @@
     "kita_ex": "2027-05-03",
     "suma": 1.9,
     "dienu_iki": 218
-   }
+   },
+   "iki_ataskaitos": 41
   },
   {
    "scenarijus": "Atsistatymas",
@@ -153,6 +181,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 3.130298516944666,
    "atsiemimas_atr": 0.40092552723405356,
+   "baru_nuo_dugno": 96,
+   "nesekmes": 3,
    "silpnas_atsiemimas": false,
    "R_pilnas": 15.029999732971191,
    "tikslas_ribotas": true,
@@ -163,6 +193,10 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 1.0981227269472371,
    "rinka": "EU",
    "tickeris": "ORA.PA",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -173,7 +207,8 @@
     "kita_ex": "2026-12-10",
     "suma": 0.45,
     "dienu_iki": 74
-   }
+   },
+   "iki_ataskaitos": 32
   },
   {
    "scenarijus": "Atsistatymas",
@@ -188,6 +223,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 2.49340064987513,
    "atsiemimas_atr": 0.680553855284952,
+   "baru_nuo_dugno": 101,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 37.564998626708984,
    "tikslas_ribotas": true,
@@ -198,6 +235,10 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 1.0591575921479301,
    "rinka": "EU",
    "tickeris": "PRX.AS",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -208,7 +249,8 @@
     "kita_ex": "2026-10-29",
     "suma": 0.2,
     "dienu_iki": 32
-   }
+   },
+   "iki_ataskaitos": 61
   },
   {
    "scenarijus": "Atsistatymas",
@@ -223,6 +265,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.2903252676960728,
    "atsiemimas_atr": 1.14144041794683,
+   "baru_nuo_dugno": 44,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 57.400001525878906,
    "tikslas_ribotas": false,
@@ -236,6 +280,10 @@
    ],
    "tinkamas": false,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 1.5517056559900433,
    "rinka": "EU",
    "tickeris": "SW.PA",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -246,7 +294,8 @@
     "kita_ex": "2026-12-17",
     "suma": 2.7,
     "dienu_iki": 81
-   }
+   },
+   "iki_ataskaitos": 28
   },
   {
    "scenarijus": "Atsistatymas",
@@ -261,6 +310,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.0249034953245313,
    "atsiemimas_atr": 0.5459764917551966,
+   "baru_nuo_dugno": 98,
+   "nesekmes": 5,
    "silpnas_atsiemimas": false,
    "R_pilnas": 73.69999694824219,
    "tikslas_ribotas": false,
@@ -273,6 +324,10 @@
    ],
    "tinkamas": false,
    "pirmas_kartas": "2026-09-25 17:25:00+02:00",
+   "rinkos_pokytis": -0.1345236785794124,
+   "platumas": 64.25120772946859,
+   "plat_d30": -0.6002774190462645,
+   "santykinis": 1.784412325896867,
    "rinka": "EU",
    "tickeris": "TEP.PA",
    "laikas": "2026-09-25 17:25:00+02:00",
@@ -283,7 +338,8 @@
     "kita_ex": "2027-05-24",
     "suma": 4.5,
     "dienu_iki": 239
-   }
+   },
+   "iki_ataskaitos": 153
   },
   {
    "scenarijus": "Atsistatymas",
@@ -298,6 +354,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 2.917406500704694,
    "atsiemimas_atr": 1.1499675349418963,
+   "baru_nuo_dugno": 77,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 166.83999633789062,
    "tikslas_ribotas": true,
@@ -308,13 +366,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 15:55:00-04:00",
+   "rinkos_pokytis": 0.45056655971241755,
+   "platumas": 68.30985915492957,
+   "plat_d30": 6.3380281690140805,
+   "santykinis": 3.5790216606398917,
    "rinka": "JAV",
    "tickeris": "ABNB",
    "laikas": "2026-09-25 15:55:00-04:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 3.4981164632950987,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 41
   },
   {
    "scenarijus": "Atsistatymas",
@@ -329,6 +392,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.0359834940840527,
    "atsiemimas_atr": 0.09489830718880997,
+   "baru_nuo_dugno": 70,
+   "nesekmes": 5,
    "silpnas_atsiemimas": true,
    "R_pilnas": 103.69000244140625,
    "tikslas_ribotas": true,
@@ -339,13 +404,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 15:55:00-04:00",
+   "rinkos_pokytis": 0.45056655971241755,
+   "platumas": 68.30985915492957,
+   "plat_d30": 6.3380281690140805,
+   "santykinis": 0.04541599371378213,
    "rinka": "JAV",
    "tickeris": "ABT",
    "laikas": "2026-09-25 15:55:00-04:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 2.5022266554453854,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 19
   },
   {
    "scenarijus": "Atsistatymas",
@@ -360,6 +430,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 2.6651977844511627,
    "atsiemimas_atr": 1.5638764206383484,
+   "baru_nuo_dugno": 77,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 63.31999969482422,
    "tikslas_ribotas": true,
@@ -370,13 +442,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 15:55:00-04:00",
+   "rinkos_pokytis": 0.45056655971241755,
+   "platumas": 68.30985915492957,
+   "plat_d30": 6.3380281690140805,
+   "santykinis": 2.816524366209927,
    "rinka": "JAV",
    "tickeris": "BWA",
    "laikas": "2026-09-25 15:55:00-04:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 3.10533580784206,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 34
   },
   {
    "scenarijus": "Atsistatymas",
@@ -391,6 +468,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 3.3659058645893865,
    "atsiemimas_atr": 0.8753299715572612,
+   "baru_nuo_dugno": 75,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 303.6499938964844,
    "tikslas_ribotas": true,
@@ -401,13 +480,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 15:55:00-04:00",
+   "rinkos_pokytis": 0.45056655971241755,
+   "platumas": 68.30985915492957,
+   "plat_d30": 6.3380281690140805,
+   "santykinis": 1.2611763437017198,
    "rinka": "JAV",
    "tickeris": "FDX",
    "laikas": "2026-09-25 15:55:00-04:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 2.5624240786020303,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 17
   },
   {
    "scenarijus": "Atsistatymas",
@@ -422,6 +506,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.3270506886076967,
    "atsiemimas_atr": 0.8186099760873687,
+   "baru_nuo_dugno": 77,
+   "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 83.94999694824219,
    "tikslas_ribotas": true,
@@ -432,13 +518,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 15:55:00-04:00",
+   "rinkos_pokytis": 0.45056655971241755,
+   "platumas": 68.30985915492957,
+   "plat_d30": 6.3380281690140805,
+   "santykinis": 1.6682823236096822,
    "rinka": "JAV",
    "tickeris": "GM",
    "laikas": "2026-09-25 15:55:00-04:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 3.161225479431741,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 25
   },
   {
    "scenarijus": "Atsistatymas",
@@ -453,6 +544,8 @@
    "progresas_tikslus": true,
    "kritimas_atr": 2.645923230915535,
    "atsiemimas_atr": 0.7720209214460529,
+   "baru_nuo_dugno": 77,
+   "nesekmes": 1,
    "silpnas_atsiemimas": false,
    "R_pilnas": 213.47999572753906,
    "tikslas_ribotas": true,
@@ -463,13 +556,18 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-09-25 15:55:00-04:00",
+   "rinkos_pokytis": 0.45056655971241755,
+   "platumas": 68.30985915492957,
+   "plat_d30": 6.3380281690140805,
+   "santykinis": 1.0161007097706176,
    "rinka": "JAV",
    "tickeris": "PGR",
    "laikas": "2026-09-25 15:55:00-04:00",
    "sesija_data": "2026-09-25",
    "atr_pct": 2.114309516957468,
    "amzius_min": 0,
-   "dividendas": null
+   "dividendas": null,
+   "iki_ataskaitos": 19
   }
  ]
 }
