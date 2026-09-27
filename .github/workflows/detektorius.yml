@@ -32,6 +32,9 @@ jobs:
           test -f detektorius.py || (echo "KLAIDA - detektorius.py nerastas" && exit 1)
           test -f universas.py  || (echo "KLAIDA - universas.py nerastas"  && exit 1)
 
+      - name: Savitikra
+        run: python detektorius.py --savitikra
+
       - name: Aptikti scenarijus (EU + JAV)
         run: python detektorius.py --live --rinka abi
 
