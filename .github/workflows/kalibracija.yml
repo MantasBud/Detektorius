@@ -1,0 +1,37 @@
+name: Detektoriaus kalibracija
+
+on:
+  workflow_dispatch:
+    inputs:
+      dienos:
+        description: "Kiek dienu 5 min istorijos (max 60)"
+        required: false
+        default: "60"
+
+jobs:
+  kalibruoti:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      D: ${{ github.event.inputs.dienos || '60' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          test -f detektorius.py || (echo "KLAIDA - detektorius.py nerastas" && exit 1)
+          test -f universas.py  || (echo "KLAIDA - universas.py nerastas"  && exit 1)
+
+      - name: Kalibracija
+        run: python detektorius.py --kalibracija --rinka abi --dienos "$D" | tee kalibracija.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kalibracija
+          path: kalibracija.txt
