@@ -107,15 +107,100 @@ warnings.filterwarnings("ignore")
 
 # ---------------------------------------------------------------- mechanika
 # Sitie keturi skaiciai ateina is Manto saskaitos, ne is jokio tyrimo.
-POZICIJA = 18000.0          # visas portfelis vienai pozicijai
-SANAUDOS_EUR = 10.0         # pirkimas + pardavimas
-LUZIO_TASKAS = SANAUDOS_EUR / POZICIJA * 100.0      # 0.0556%
+POZICIJA = 18000.0          # visas portfelis vienai pozicijai, EUR verte
+# Sanaudos SKIRIASI pagal rinka (Manto atsakymas 2026-09-28): JAV rinkoms
+# perpus maziau. Tai ne smulkmena - is sanaudu isvesta VISA kita aritmetika
+# (luzio taskas, minimalus judesys, de facto ATR riba), tad JAV ribos
+# automatiskai perpus zemesnes, ir tai teisinga, o ne "svelnesnis filtras".
+SANAUDOS = {"eu": 10.0, "us": 5.0}      # pirkimas + pardavimas, EUR
+SANAUDOS_EUR = SANAUDOS["eu"]           # istorinis vardas = EU reiksme
 MAX_APYVARTOS_DALIS = 0.01  # pozicija ne daugiau 1% dienos apyvartos
-MIN_APYVARTA = POZICIJA / MAX_APYVARTOS_DALIS       # -> 1.8 mln EUR
+# Kai Mantas prekiaus JAV, portfelis bus doleriais - nuolatines konversijos
+# nebus. Procentine grazа valiutai abejinga, tad i eurus versti reikia tik
+# APYVARTOS riba: 1.8 mln EUR verte doleriais yra kitas skaicius.
+EURUSD_ATSARGINIS = 1.08
+KURSO_TALPYKLA = "kursas.json"
+_KURSAS = {}
 
-# Maziausias prasmingas judesys: kad sandoris butu vertas darymo, tikslas
-# turi buti bent 10x uz luzio taska. Tai isvesta is sanaudu, ne is tyrimo.
-MIN_JUDESYS_PCT = 10 * LUZIO_TASKAS                 # -> 0.556%
+
+def eur_usd():
+    """USD uz 1 EUR. Kesuojama parai; nepavykus - atsargine reiksme, garsiai."""
+    if "v" in _KURSAS:
+        return _KURSAS["v"]
+    try:
+        if os.path.exists(KURSO_TALPYKLA):
+            with open(KURSO_TALPYKLA, encoding="utf-8") as f:
+                t = json.load(f)
+            if (datetime.now() - datetime.fromisoformat(t["kada"])).days < 1:
+                _KURSAS["v"] = float(t["kursas"])
+                return _KURSAS["v"]
+    except Exception:
+        pass
+    v = None
+    try:
+        d = yf.download("EURUSD=X", period="5d", interval="1d",
+                        progress=False, auto_adjust=False)
+        c = _vienas(d, "EURUSD=X")
+        if c is not None and len(c):
+            v = float(c["Close"].dropna().iloc[-1])
+    except Exception:
+        v = None
+    if not v or not (0.5 < v < 2.0):
+        print(f"  DEMESIO: EUR/USD kurso negauta, imama atsargine "
+              f"{EURUSD_ATSARGINIS}")
+        v = EURUSD_ATSARGINIS
+    else:
+        try:
+            with open(KURSO_TALPYKLA, "w", encoding="utf-8") as f:
+                json.dump(dict(kursas=v, kada=datetime.now().isoformat()), f)
+        except Exception:
+            pass
+    _KURSAS["v"] = v
+    return v
+
+
+def sanaudos(rinka):
+    return SANAUDOS.get(rinka, SANAUDOS["eu"])
+
+
+ZYME_I_RINKA = {"EU": "eu", "JAV": "us"}
+
+
+def sanaudos_zymei(zyme):
+    """Sanaudos pagal puslapio/zurnalo zyme ('EU' / 'JAV')."""
+    return sanaudos(ZYME_I_RINKA.get(str(zyme), "eu"))
+
+
+def luzio_taskas(rinka):
+    return sanaudos(rinka) / POZICIJA * 100.0       # EU 0.0556%, JAV 0.0278%
+
+
+def min_judesys(rinka):
+    """Maziausias prasmingas judesys: tikslas bent 10x uz luzio taska.
+
+    Isvesta is sanaudu, ne is tyrimo.
+    """
+    return 10 * luzio_taskas(rinka)                 # EU 0.556%, JAV 0.278%
+
+
+def min_atr_pct(rinka):
+    """De facto ATR riba: tikslas = 0.5 ATR, tad ATR < sito niekada nepraeis."""
+    return min_judesys(rinka) / S1_TIKSLAS_ATR      # EU 1.11%, JAV 0.556%
+
+
+def min_apyvarta(rinka):
+    """Apyvartos riba KOTIRAVIMO valiuta.
+
+    Iki 2026-09-28 cia buvo viena 1.8 mln riba, taikoma ir doleriniu akciju
+    apyvartai - t.y. eurine riba lyginama su doleriniu skaiciumi. Paklaida
+    nedidele, bet tai aritmetikos klaida, ir pleciant JAV dali ji auga.
+    """
+    v = POZICIJA / MAX_APYVARTOS_DALIS
+    return v * (eur_usd() if rinka == "us" else 1.0)
+
+
+LUZIO_TASKAS = SANAUDOS_EUR / POZICIJA * 100.0      # EU, ataskaitoms
+MIN_JUDESYS_PCT = 10 * LUZIO_TASKAS                 # EU, ataskaitoms
 # SALUTINE PASEKME, uzrasyta samoningai (rasta perziurint 2026-09-27):
 # kadangi 1 scenarijaus tikslas yra 0.5*ATR, o judesys turi buti >= 0.556%,
 # akcijos su ATR < 1.11% 1 scenarijaus signalo NEDUODA NIEKADA. Tai de facto
@@ -136,7 +221,7 @@ BUSENOS_FAILAS = "busena.json"
 ZURNALAS = "docs/zurnalas.csv"
 ZURNALO_STULPELIAI = [
     "raktas", "gimimas", "rinka", "tickeris", "scenarijus", "tipas", "sesija",
-    "ieina", "tikslas", "stop", "rr", "rizika_eur", "atr_pct",
+    "ieina", "tikslas", "stop", "rr", "rizika_eur", "atr_pct", "sanaudos",
     "tinkamas", "kliutys", "atr_abs",
     "paskut_laikas", "paskut_kaina", "mfe_pct", "mae_pct",
     "baigtis", "pelnas_pct", "eur", "minuciu",
@@ -161,7 +246,8 @@ S1_TIKSLAS_ATR = 0.50
 # nuo iejimo, tad prie 0.5 ATR tikslo R:R butu 0.43 ir signalas uzsiblokuotu.
 S1_MAX_RIZIKA_ATR = 0.50
 # Nenaudojama kode - tai IsVESTINE, rodanti, kur de facto atsiduria riba.
-MIN_ATR_PCT = MIN_JUDESYS_PCT / S1_TIKSLAS_ATR      # -> 1.11%, zr. komentara virs
+# Tikroji riba pagal rinka - min_atr_pct(rinka).
+MIN_ATR_PCT = MIN_JUDESYS_PCT / S1_TIKSLAS_ATR      # -> EU 1.11%
 # ISEJIMO VARIANTAI. Skaiciuojami VIENU perejimu ant TU PACIU signalu, tad
 # palyginimas svarus - skiriasi tik isejimas, ne aptikimas. Is anksto uzrasyti
 # trys, ne tinklelis. Priimamas tik tas, kuris teigiamas EU 1-oje, EU 2-oje,
@@ -509,7 +595,7 @@ def rinkos_fonas(barai, rod):
 
 # ================================================ scenarijai (grynos funkcijos)
 
-def _bendra(sig, kd):
+def _bendra(sig, kd, rinka="eu"):
     """1 PAKOPOS patikros: isvestos is mechanikos ir aritmetikos.
 
     2 pakopos (kalibracijos uzsidirbtu) ribu cia kol kas nera ne vienos -
@@ -517,16 +603,19 @@ def _bendra(sig, kd):
     ir nematytoje puseje, ir abiejose rinkose.
     """
     kl = []
-    if kd["apyvarta"] < MIN_APYVARTA:
+    sig["sanaudos"] = sanaudos(rinka)
+    riba_apyv = min_apyvarta(rinka)
+    if kd["apyvarta"] < riba_apyv:
         kl.append(f"apyvarta {kd['apyvarta']/1e6:.1f} mln < "
-                  f"{MIN_APYVARTA/1e6:.1f}")
+                  f"{riba_apyv/1e6:.1f}")
     # rizika eurais rodoma kortelėje - sprendzia Mantas, kodas neblokuoja
     sig["rizika_pct"] = (sig["ieina"] - sig["stop"]) / sig["ieina"] * 100.0
     sig["rizika_eur"] = sig["rizika_pct"] / 100.0 * POZICIJA
     if sig.get("tikslas"):
         judesys = (sig["tikslas"] - sig["ieina"]) / sig["ieina"] * 100.0
-        if judesys < MIN_JUDESYS_PCT:
-            kl.append(f"judesys {judesys:.2f}% < {MIN_JUDESYS_PCT:.2f}%")
+        riba_jud = min_judesys(rinka)
+        if judesys < riba_jud:
+            kl.append(f"judesys {judesys:.2f}% < {riba_jud:.2f}%")
         rr = (sig["tikslas"] - sig["ieina"]) / max(1e-9, sig["ieina"] - sig["stop"])
         sig["rr"] = rr
         if rr < MIN_RR - 1e-9:
@@ -534,7 +623,7 @@ def _bendra(sig, kd):
     return kl
 
 
-def scenarijus_1(langas, kd):
+def scenarijus_1(langas, kd, rinka="eu"):
     """Kritimas 1-5 sesijas + vakarykscio uzdarymo atsiemimas.
 
     Kol kaina neatsieme vakarykscio uzdarymo, signalo nera. Bet trumpas
@@ -622,7 +711,7 @@ def scenarijus_1(langas, kd):
                silpnas_atsiemimas=bool((kaina - vakar_uzd) / atr < 0.25),
                R_pilnas=R_pilnas, tikslas_ribotas=bool(R < R_pilnas - 1e-9),
                kelias_atr=(R_pilnas - kaina) / atr)
-    sig["kliutys"] = _bendra(sig, kd)
+    sig["kliutys"] = _bendra(sig, kd, rinka)
     return sig
 
 
@@ -672,7 +761,7 @@ def scenarijus_2(langas, kd, iki_uzdarymo=None, rinka="eu"):
                progresas=min(1.0, max(prog_j, prog_l)),
                progresas_tikslus=False, tarpas_atr=tarpas / atr,
                virsune_vertinimas=kaina + S2_TRAIL_ATR * atr)
-    sig["kliutys"] = _bendra(sig, kd)
+    sig["kliutys"] = _bendra(sig, kd, rinka)
     return sig
 
 
@@ -685,7 +774,7 @@ def aptikti(langas, kd, iki_uzdarymo=None, rinka="eu"):
     rez = []
     for f in (scenarijus_1, scenarijus_2):
         try:
-            s = (f(langas, kd) if f is scenarijus_1
+            s = (f(langas, kd, rinka) if f is scenarijus_1
                  else f(langas, kd, iki_uzdarymo, rinka))
         except Exception as e:
             raktas = f"{f.__name__}: {type(e).__name__}: {e}"
@@ -1214,6 +1303,7 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
                 ieina=round(e["ieina"], 4), tikslas=e.get("tikslas"),
                 stop=round(e["stop"], 4), rr=(round(e["rr"], 2) if np.isfinite(e.get("rr", np.nan)) else ""),
                 rizika_eur=round(e.get("rizika_eur", float("nan")), 1),
+                sanaudos=e.get("sanaudos", sanaudos_zymei(e["rinka"])),
                 atr_pct=round(e.get("atr_pct", float("nan")), 2),
                 atr_abs=round(float(e["atr_abs"]), 6),
                 tinkamas=bool(e["tinkamas"]),
@@ -1263,7 +1353,14 @@ def _zurnalo_eilute(r, toliau, sig, dabar):
     def uzdaryti(kuo):
         r["baigtis"] = kuo
         r["pelnas_pct"] = round(b["pelnas_pct"], 3)
-        r["eur"] = round(b["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR, 1)
+        # sanaudos - is TOS eilutes rinkos. Senos eilutes be stulpelio
+        # gauna ja pagal zyme, ne globalia EU reiksme.
+        sn = r.get("sanaudos")
+        try:
+            sn = float(sn)
+        except (TypeError, ValueError):
+            sn = sanaudos_zymei(r.get("rinka", "EU"))
+        r["eur"] = round(b["pelnas_pct"] / 100 * POZICIJA - sn, 1)
         r["minuciu"] = b["minuciu"]
 
     # uzdarom TIK tada, kai tikrai issisprende. "laikas" gyvai reiskia tik
@@ -1289,7 +1386,7 @@ def _zurnalo_irasyti(z):
     print(f"  zurnalas: {len(z)} eiluciu ({atviros} atviros)")
 
 
-def atkurti(s, sena, kd, kaina):
+def atkurti(s, sena, kd, kaina, rinka="eu"):
     """Atstato signala is busenos ir PERSKAICIUOJA viska, kas nuo jos priklauso.
 
     Kortele turi rodyti viena nuosekliai suderinta trijule: ieina, stop,
@@ -1315,7 +1412,7 @@ def atkurti(s, sena, kd, kaina):
         s["atsiemimas_atr"] = sena["atsiemimas_atr"]
         s["silpnas_atsiemimas"] = bool(sena["atsiemimas_atr"] < 0.25)
     s["pirmas_kartas"] = sena.get("laikas", s.get("laikas"))
-    s["kliutys"] = _bendra(s, kd)
+    s["kliutys"] = _bendra(s, kd, rinka)
     s["tinkamas"] = len(s["kliutys"]) == 0
     L = sena.get("L", s.get("L"))
     rp = s.get("R_pilnas")
@@ -1348,7 +1445,7 @@ def paleisti_live(rinkos):
                 dabar = str(d.index[-1])
                 sena = busena.get(raktas)
                 if sena:
-                    atkurti(s, sena, kd, float(sesija["Close"].iloc[-1]))
+                    atkurti(s, sena, kd, float(sesija["Close"].iloc[-1]), rinka)
                 else:
                     busena[raktas] = dict(L=s["L"], R=s.get("R"), stop=s["stop"],
                                           R_pilnas=s.get("R_pilnas"),
@@ -1506,7 +1603,7 @@ def variantu_lentele(df):
         gg = g.dropna(subset=[pc])
         if gg.empty:
             continue
-        eur = gg[pc] / 100 * POZICIJA - SANAUDOS_EUR
+        eur = _eur(gg, pc)
         pdd = gg.assign(eur=eur).groupby("sesija")["eur"].mean().values
         if len(pdd) >= 10:
             bs = [rng.choice(pdd, len(pdd), replace=True).mean() for _ in range(2000)]
@@ -1537,7 +1634,7 @@ def kandidato_testas(df):
     if "kelias_atr" not in df or df["kelias_atr"].isna().all():
         return
     g = df.dropna(subset=["kelias_atr"]).copy()
-    g["eur"] = g["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR
+    g["eur"] = _eur(g)
     print("\n  KANDIDATAS: kelias iki buvusio lygio >= 1.0 ATR")
     print(f"    {'grupe':<16}{'N':>6}{'vid EUR':>10}{'tiksl':>7}{'stop':>7}"
           f"{'95% EUR':>19}")
@@ -1564,6 +1661,19 @@ _DALIS = [""]           # kurio matavimo dabar esame (nustato ataskaita())
 _MATAVIMAI = []         # kurie matavimai TUREJO ivykti (nustato kalibracija)
 
 
+def _eur(df, stulp="pelnas_pct"):
+    """Rezultatas eurais su TOS eilutes rinkos sanaudomis.
+
+    Iki 2026-09-28 visur buvo viena 10 EUR reiksme, tad JAV sandoriai buvo
+    nubausti dvigubai uz sanaudas, kuriu nepatyre.
+    """
+    sn = (pd.to_numeric(df["sanaudos"], errors="coerce")
+          if "sanaudos" in df else pd.Series(np.nan, index=df.index))
+    if "rinka" in df:
+        sn = sn.fillna(df["rinka"].map(sanaudos_zymei))
+    return df[stulp] / 100 * POZICIJA - sn.fillna(SANAUDOS_EUR)
+
+
 def pjuviai(df, tik_kandidatai=False):
     """KANDIDATAI I FILTRUS (2 pakopa).
 
@@ -1576,7 +1686,7 @@ def pjuviai(df, tik_kandidatai=False):
     KAND = ("rinkos_pokytis", "platumas", "plat_d30", "santykinis",
             "atsiemimas_atr", "baru_nuo_dugno", "nesekmes", "iki_ataskaitos")
     df = df.copy()
-    df["eur"] = df["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR
+    df["eur"] = _eur(df)
     df["valanda"] = (df["minute"] // 60) if "minute" in df else np.nan
 
     def pjuvis(pav, stulp, kvantiliai=True):
@@ -1658,8 +1768,9 @@ def kandidatu_verdiktas():
             v = "per mazai duomenu"
         else:
             d = [x[1] - x[0] for x in turim]
-            v = ("TINKA" if (all(y > SANAUDOS_EUR for y in d)
-                             or all(y < -SANAUDOS_EUR for y in d))
+            riba = max(SANAUDOS.values())   # griezciausios sanaudos
+            v = ("TINKA" if (all(y > riba for y in d)
+                             or all(y < -riba for y in d))
                  else "nelaikosi")
         print(f"  {k:<18}{eil}  {v}")
     print("\n  TINKA reiskia: kryptis ta pati visur IR skirtumas didesnis uz")
@@ -1683,7 +1794,7 @@ def ataskaita(ivykiai, zyme, trumpai=False):
     print("-" * 124)
     rng = np.random.default_rng(42)
     for nm, g in df.groupby("scenarijus"):
-        eur = g["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR
+        eur = _eur(g)
         pdd = g.assign(eur=eur).groupby("sesija")["eur"].mean().values
         ppd = g.groupby("sesija")["pelnas_pct"].mean().values   # tas pats svoris
         if len(pdd) >= 10:
@@ -1705,8 +1816,10 @@ def ataskaita(ivykiai, zyme, trumpai=False):
         pjuviai(df, tik_kandidatai=True)
         return
     pjuviai(df)
-    print(f"\n  Pozicija {POZICIJA:.0f} EUR, sanaudos {SANAUDOS_EUR:.0f} EUR "
-          f"(luzio taskas {LUZIO_TASKAS:.4f}%). Horizontas {HORIZONTAS_SESIJU} sesijos,")
+    print(f"\n  Pozicija {POZICIJA:.0f} EUR. Sanaudos: EU {SANAUDOS['eu']:.0f} EUR "
+          f"(luzis {luzio_taskas('eu'):.4f}%), JAV {SANAUDOS['us']:.0f} EUR "
+          f"(luzis {luzio_taskas('us'):.4f}%).")
+    print(f"  Horizontas {HORIZONTAS_SESIJU} sesijos,")
     print("  pozicija nesama per nakti. MFE - kiek daugiausia buvo naudai;")
     print("  jei MFE dideles, o 'vid %' mazas, klaida yra isejimo taisykleje.")
     print("  EUR ir 95% intervalas - abu DIENOS vidurkiai (ne sandorio), tad\n"
@@ -1730,6 +1843,11 @@ def savitikra():
     aprasyta, ir kad scenarijai nepersidengtu.
     """
     ok = True
+    # Kursas prisegamas: savitikra privalo veikti BE tinklo ir duoti ta pati
+    # rezultata kiekviena karta. Kitaip JAV ribu testai priklausytu nuo to,
+    # ar tuo metu pavyko atsiusti EUR/USD.
+    _KURSAS.clear()
+    _KURSAS["v"] = 1.10
 
     def tikrinti(s, salyga, ar):
         nonlocal ok
@@ -2286,6 +2404,64 @@ def savitikra():
         except OSError:
             pass
         ATASKAITU_TALPYKLA = tikras_kelias
+
+    # --- SANAUDOS PAGAL RINKA ir VALIUTA (2026-09-28) --------------------
+    tikrinti("JAV sanaudos perpus mazesnes uz EU",
+             (sanaudos("eu"), sanaudos("us")), (10.0, 5.0))
+    tikrinti("luzio taskas ir minimalus judesys seka sanaudas",
+             (round(min_judesys("eu"), 4), round(min_judesys("us"), 4)),
+             (0.5556, 0.2778))
+    tikrinti("de facto ATR riba JAV perpus zemesne",
+             round(min_atr_pct("us") / min_atr_pct("eu"), 4), 0.5)
+    _KURSAS.clear(); _KURSAS["v"] = 1.10
+    tikrinti("apyvartos riba JAV verciama i dolerius",
+             (round(min_apyvarta("eu")), round(min_apyvarta("us"))),
+             (1800000, 1980000))
+    # elgsena: tas pats signalas, dvi rinkos
+    k_maz = kd(100.0, 0.6, 130.0, 0.10, 95.0, apyvarta=1.9e6)
+    sig_eu = dict(ieina=100.0, tikslas=100.30, stop=99.70)
+    sig_us = dict(sig_eu)
+    kl_eu = _bendra(sig_eu, k_maz, "eu")
+    kl_us = _bendra(sig_us, k_maz, "us")
+    tikrinti("0.30% judesys EU blokuojamas (riba 0.56%)",
+             any("judesys" in x for x in kl_eu), True)
+    tikrinti("               o JAV praeina (riba 0.28%)",
+             any("judesys" in x for x in kl_us), False)
+    tikrinti("signalas nesiojasi savo rinkos sanaudas",
+             (sig_eu["sanaudos"], sig_us["sanaudos"]), (10.0, 5.0))
+    # 1.9 mln: EU apyvarta praeina, JAV (riba 1.98 mln doleriu) - ne
+    tikrinti("apyvartos kliutis skiriasi pagal valiuta",
+             (any("apyvarta" in x for x in kl_eu),
+              any("apyvarta" in x for x in kl_us)), (False, True))
+
+    d_eur = pd.DataFrame([dict(pelnas_pct=1.0, sanaudos=10.0, rinka="EU"),
+                          dict(pelnas_pct=1.0, sanaudos=5.0, rinka="JAV")])
+    tikrinti("rezultatas eurais ima TOS eilutes sanaudas",
+             [round(x, 1) for x in _eur(d_eur)], [170.0, 175.0])
+    sena_z = pd.DataFrame([dict(pelnas_pct=1.0, rinka="JAV")])
+    tikrinti("sena eilute be stulpelio gauna sanaudas pagal zyme",
+             round(float(_eur(sena_z).iloc[0]), 1), 175.0)
+
+    _KURSAS.clear()
+    tikras_yf2 = globals().get("yf")
+
+    class _BlogasYF:
+        @staticmethod
+        def download(*a, **k):
+            raise RuntimeError("tinklo nera")
+    globals()["yf"] = _BlogasYF
+    tikras_kelias2 = KURSO_TALPYKLA
+    try:
+        globals()["KURSO_TALPYKLA"] = os.path.join(tempfile.gettempdir(),
+                                                   "savitikra_kursas.json")
+        k1 = eur_usd()
+        tikrinti("kurso negavus imama atsargine reiksme, o ne nulis",
+                 k1, EURUSD_ATSARGINIS)
+    finally:
+        globals()["yf"] = tikras_yf2
+        globals()["KURSO_TALPYKLA"] = tikras_kelias2
+        _KURSAS.clear()
+        _KURSAS["v"] = 1.10
 
     ses_t = date(2026, 7, 24)
     tikrinti("iki ataskaitos: rytojaus ataskaita -> +1",
