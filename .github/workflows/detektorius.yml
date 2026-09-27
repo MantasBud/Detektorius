@@ -53,4 +53,6 @@ jobs:
           # Ataskaitu datos: be sito failo live rezimas kas paleidima
           # klaustu is naujo, ir saltinis mus apribotu.
           [ -f ataskaitos.json ] && git add ataskaitos.json || true
+          # EUR/USD kursas: kesuojamas parai, naudojamas JAV apyvartos ribai.
+          [ -f kursas.json ] && git add kursas.json || true
           git diff --cached --quiet || (git commit -m "Detektorius" && git push)
