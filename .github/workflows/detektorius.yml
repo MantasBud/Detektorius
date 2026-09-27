@@ -3,7 +3,7 @@ name: Detektorius
 on:
   schedule:
     # EU sesija 09:00-17:30 Berlyno = 07:00-15:30 UTC
-    # JAV sesija 09:30-16:00 Niujorko = 14:30-21:00 UTC
+    # JAV sesija 09:30-16:00 Niujorko = 13:30-20:00 UTC (vasara) / 14:30-21:00 (ziema)
     - cron: "*/5 7-21 * * 1-5"
   workflow_dispatch: {}
 
@@ -32,15 +32,22 @@ jobs:
           test -f detektorius.py || (echo "KLAIDA - detektorius.py nerastas" && exit 1)
           test -f universas.py  || (echo "KLAIDA - universas.py nerastas"  && exit 1)
 
+      # Savitikra be tinklo, ~5 sek. Jei scenarijai nebepagauna etalonu arba
+      # live nebegauna apyv_santykis - nutruksta cia, o ne tyliai parodo
+      # tuscia puslapi visa diena.
       - name: Savitikra
         run: python detektorius.py --savitikra
 
-      - name: Aptikti scenarijus (EU + JAV)
+      # Sis zingsnis pats sugeneruoja docs/index.html, docs/detektorius.json
+      # ir atnaujina docs/zurnalas.csv - kaip anksciau tai dare dip_reitingas.py
+      - name: Aptikti scenarijus ir sudelioti puslapi (EU + JAV)
         run: python detektorius.py --live --rinka abi
 
       - name: Irasyti pakeitimus
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs busena.json
+          git add -A docs
+          [ -f busena.json ] && git add busena.json || true
+          [ -f dividendai.json ] && git add dividendai.json || true
           git diff --cached --quiet || (git commit -m "Detektorius" && git push)
