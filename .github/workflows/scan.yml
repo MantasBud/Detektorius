@@ -1,8 +1,17 @@
-name: Dip reitingo atnaujinimas
+name: Dip reitingo atnaujinimas (ISJUNGTAS)
+
+# 2026-09-27: automatinis tvarkarastis PASALINTAS.
+#
+# Priezastis: sis workflow kas 5 min paleisdavo dip_reitingas.py, kuris
+# perrasydavo docs/index.html senojo REITINGUOTOJO puslapiu. Detektorius
+# raso i ta pati faila, tad du workflow'ai musdavosi del to paties failo,
+# ir puslapyje likdavo tas, kuris pasileido veliau.
+#
+# Reitinguotojas projekte nebenaudojamas (zr. claude/detektorius.md).
+# Failas paliktas, kad butu galima paleisti rankomis is Actions, jei
+# prireiktu senu duomenu. Jei nebereikia - faila galima tiesiog istrinti.
 
 on:
-  schedule:
-    - cron: "*/5 6-16 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
@@ -18,11 +27,13 @@ jobs:
           python-version: "3.11"
       - name: Įdiegti bibliotekas
         run: pip install yfinance pandas numpy tzdata
+      # DEMESIO: rasoma i docs_reitingas, NE i docs - kad nebeperrasytu
+      # detektoriaus puslapio net ir paleidus rankomis.
       - name: Surinkti duomenis ir sudėlioti puslapį
-        run: python dip_reitingas.py --out docs --no-browser
+        run: python dip_reitingas.py --out docs_reitingas --no-browser
       - name: Įrašyti pakeitimus
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs
-          git diff --cached --quiet || (git commit -m "Duomenų atnaujinimas" && git push)
+          git add -A docs_reitingas
+          git diff --cached --quiet || (git commit -m "Reitinguotojas (rankinis)" && git push)
