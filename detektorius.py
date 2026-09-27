@@ -110,6 +110,12 @@ MIN_APYVARTA = POZICIJA / MAX_APYVARTOS_DALIS       # -> 1.8 mln EUR
 # Maziausias prasmingas judesys: kad sandoris butu vertas darymo, tikslas
 # turi buti bent 10x uz luzio taska. Tai isvesta is sanaudu, ne is tyrimo.
 MIN_JUDESYS_PCT = 10 * LUZIO_TASKAS                 # -> 0.556%
+# SALUTINE PASEKME, uzrasyta samoningai (rasta perziurint 2026-09-27):
+# kadangi 1 scenarijaus tikslas yra 0.5*ATR, o judesys turi buti >= 0.556%,
+# akcijos su ATR < 1.11% 1 scenarijaus signalo NEDUODA NIEKADA. Tai de facto
+# MIN_ATR riba. Ji teisėta pagal 1 pakopa (aritmetika is sanaudu), NE
+# paveldėta is reitinguotojo, ir ji veikia PRIESINGA puse nei senasis
+# F_MAX_ATR = 3.5: anksciau buvo ismetamos JUDRIOS akcijos, dabar - RAMIOS.
 MIN_RR = 1.0                                        # aritmetika
 
 BARAS_MIN = 5
@@ -125,7 +131,7 @@ ZURNALAS = "docs/zurnalas.csv"
 ZURNALO_STULPELIAI = [
     "raktas", "gimimas", "rinka", "tickeris", "scenarijus", "tipas", "sesija",
     "ieina", "tikslas", "stop", "rr", "rizika_eur", "atr_pct",
-    "tinkamas", "kliutys",
+    "tinkamas", "kliutys", "atr_abs",
     "paskut_laikas", "paskut_kaina", "mfe_pct", "mae_pct",
     "baigtis", "pelnas_pct", "eur", "minuciu",
 ]
@@ -137,7 +143,27 @@ DIVIDENDU_TALPYKLA = "dividendai.json"
 S1_LANGAS_D = 5             # per kiek sesiju vertinamas kritimas
 S1_MIN_KRITIMAS_ATR = 1.0   # kritimas bent vienas dienos ATR
 S1_MAX_UZD_VIETA = 0.40     # vakar uzdare apatiniame diapazono ketvirtyje
-S1_STOP_ATR = 0.30          # stop'as zemiau dugno, ATR vienetais
+S1_STOP_ATR = 0.30          # stop'as zemiau atsiimto lygio, ATR vienetais
+# KONSERVATYVUS TIKSLAS (Manto sprendimas 2026-09-27). Jis iseina PATS ir nori
+# tikslo, kuris dar yra pelningoje zonoje, o ne absoliutaus maksimumo:
+# "kartais paimu 100-500 euru, kol dar pozicija nepradejo kristi".
+# 0.5 ATR prie EU medianos ~2.6% yra ~1.3% = ~234 EUR nuo 18 000 - tiksliai
+# tame ruoze. Buvusio lygio (virsune_n) tikslas niekada nevirsija.
+S1_TIKSLAS_ATR = 0.50
+# Rizikos riba - to paties principo antra puse. Konservatyvus tikslas su
+# placiu stop'u duotu beviltiska geometrija: SAP etalone stop'as buvo 1.15 ATR
+# nuo iejimo, tad prie 0.5 ATR tikslo R:R butu 0.43 ir signalas uzsiblokuotu.
+S1_MAX_RIZIKA_ATR = 0.50
+MIN_ATR_PCT = MIN_JUDESYS_PCT / S1_TIKSLAS_ATR      # -> 1.11%, zr. komentara virs
+# ISEJIMO VARIANTAI. Skaiciuojami VIENU perejimu ant TU PACIU signalu, tad
+# palyginimas svarus - skiriasi tik isejimas, ne aptikimas. Is anksto uzrasyti
+# trys, ne tinklelis. Priimamas tik tas, kuris teigiamas EU 1-oje, EU 2-oje,
+# JAV 1-oje ir JAV 2-oje pusese.
+ISEJIMO_VARIANTAI = {
+    "T05": dict(tikslas_atr=0.50, trail=False),   # kortelėje rodomas
+    "T10": dict(tikslas_atr=1.00, trail=False),
+    "SL":  dict(tikslas_atr=None, trail=True),    # slenkantis, be tikslo
+}
 # Cia BUVO S1_MAX_NUO_UZD_ATR = 0.50 ("nesivyti nubegusios"). Isimta: savitikra
 # parode, kad ji blokuoja SAP 07-24 - viena is dvieju etalonu - nes SAP atidare
 # 0.85 ATR virs uzdarymo. Ta pati darba jau daro R:R patikra, kuri isvedama is
@@ -349,7 +375,7 @@ def _bendra(sig, kd):
             kl.append(f"judesys {judesys:.2f}% < {MIN_JUDESYS_PCT:.2f}%")
         rr = (sig["tikslas"] - sig["ieina"]) / max(1e-9, sig["ieina"] - sig["stop"])
         sig["rr"] = rr
-        if rr < MIN_RR:
+        if rr < MIN_RR - 1e-9:
             kl.append(f"R:R {rr:.2f} < {MIN_RR}")
     return kl
 
@@ -395,11 +421,17 @@ def scenarijus_1(langas, kd):
     if not (np.isfinite(vwap) and kaina > vwap):
         return None
 
-    # Stop'as ristas prie ATSIIMTO lygio, ne prie 5 dienu dugno. Jei kaina
-    # krenta atgal po vakarykscio uzdarymo, apsisukimas neivyko - tai ir yra
-    # prielaida. 5 dienu dugnas (kd["dugnas_n"]) butu 3-5 ATR zemiau ir
-    # nuzudytu R:R: savitikroje SAP su juo davė R:R 0.60 ir butu blokuotas.
+    # STOP'AS turi dvi dedamasias, ir imama AUKSTESNE:
+    #   a) struktūrinė: po atsiimtu lygiu (L - 0.3 ATR). Jei kaina krenta
+    #      atgal po vakarykscio uzdarymo, apsisukimas neivyko.
+    #   b) rizikos limitas: ne daugiau 0.5 ATR nuo iejimo.
+    # Pusėje atveju laimi (b), t.y. stop'as atsiduria VIRS atsiimto lygio -
+    # pozicija uzdaroma dar galiojant apsisukimo prielaidai. Tai samoningas
+    # mainas: be jo konservatyvus 0.5 ATR tikslas duotu R:R ~0.43 (SAP
+    # etalone) ir signalas uzsiblokuotu pats.
+    # 5 dienu dugnas (kd["dugnas_n"]) butu 3-5 ATR zemiau ir netiktu niekaip.
     L = min(float(langas["Low"].min()), vakar_uzd)
+    stop = max(L - S1_STOP_ATR * atr, kaina - S1_MAX_RIZIKA_ATR * atr)
 
     # TIKSLAS PAGAL PASIEKIAMUMA (Manto 2 pastaba 09-27):
     # "Reikia vertinti koks kritimas buvo, ar akcija gali tiek atsistatyti ...
@@ -414,9 +446,9 @@ def scenarijus_1(langas, kd):
         return None      # buves lygis jau pasiektas - tikslo nebera. Tai ne
                          # filtras, o aritmetika: kitaip kortele rodytu tiksla
                          # ZEMIAU iejimo ir neigiama R:R.
-    R = min(R_pilnas, kaina + HORIZONTAS_SESIJU * atr)
+    R = min(R_pilnas, kaina + S1_TIKSLAS_ATR * atr)
     sig = dict(scenarijus="Kritimas ir apsisukimas", tipas=1, ieina=kaina,
-               tikslas=R, stop=L - S1_STOP_ATR * atr, R=R, L=L, atr_abs=atr,
+               tikslas=R, stop=stop, R=R, L=L, atr_abs=atr,
                progresas=(kaina - L) / (R - L) if R > L else 0.0,
                progresas_tikslus=True, kritimas_atr=kritimas / atr,
                R_pilnas=R_pilnas, tikslas_ribotas=bool(R < R_pilnas - 1e-9),
@@ -915,6 +947,26 @@ def puslapis_html(eilutes, z):
 
 # ================================================================ live
 
+def isejimo_variantai(toliau, sig):
+    """Visi ISEJIMO_VARIANTAI ant to paties signalo ir tu paciu baru."""
+    out = {}
+    atr = sig["atr_abs"]
+    for vardas, v in ISEJIMO_VARIANTAI.items():
+        s2 = dict(sig)
+        if v["trail"]:
+            s2["tipas"] = 2          # tipas 2 ijungia slenkanti stop'a
+            s2["tikslas"] = None
+            s2["stop"] = sig["L"] - S1_STOP_ATR * atr   # platus, struktūrinis
+        else:
+            s2["tipas"] = 1
+            s2["tikslas"] = min(float(sig["R_pilnas"]),
+                                sig["ieina"] + v["tikslas_atr"] * atr)
+        b = baigtis(toliau, s2)
+        out[vardas] = dict(baigtis=b["baigtis"], pelnas_pct=b["pelnas_pct"],
+                           minuciu=b["minuciu"])
+    return out
+
+
 def zurnalas_ikelti():
     if not os.path.exists(ZURNALAS):
         return {}
@@ -977,6 +1029,7 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
                 stop=round(e["stop"], 4), rr=(round(e["rr"], 2) if np.isfinite(e.get("rr", np.nan)) else ""),
                 rizika_eur=round(e.get("rizika_eur", float("nan")), 1),
                 atr_pct=round(e.get("atr_pct", float("nan")), 2),
+                atr_abs=round(float(e["atr_abs"]), 6),
                 tinkamas=bool(e["tinkamas"]),
                 kliutys="; ".join(e["kliutys"]),
                 paskut_laikas="", paskut_kaina="", mfe_pct="", mae_pct="",
@@ -994,7 +1047,7 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
                             if str(r.get("tikslas") or "") not in ("", "nan")
                             else None),
                    stop=float(r["stop"]),
-                   atr_abs=float(r["atr_pct"]) / 100.0 * float(r["ieina"]))
+                   atr_abs=float(r["atr_abs"]))
         b = baigtis(toliau, sig)
         r["paskut_laikas"] = dabar
         r["paskut_kaina"] = round(float(toliau["Close"].iloc[-1]), 4)
@@ -1143,6 +1196,10 @@ def paleisti_kalibracija(rinkos, dienos):
                             [sesijos[si + j][1] for j in range(1, HORIZONTAS_SESIJU)
                              if si + j < len(sesijos)])
                         s.update(baigtis(toliau, s))
+                        if s["tipas"] == 1 and s.get("R_pilnas"):
+                            for vn, vb in isejimo_variantai(toliau, s).items():
+                                s[f"v_{vn}_baigtis"] = vb["baigtis"]
+                                s[f"v_{vn}_pct"] = vb["pelnas_pct"]
                         s.update(tickeris=t, sesija=str(ses),
                                  atr_pct=float(kd["atr_pct"]),
                                  minute=int(sd["minute"].iloc[i]),
@@ -1177,6 +1234,41 @@ def vienalaikiskumas(df):
         vid.append(sk[:n].mean())      # buvo sk.mean() per n+2 -> ~20% per mazai
         mx = max(mx, int(sk.max()))
     return float(np.mean(vid)), mx
+
+
+def variantu_lentele(df):
+    """Trys isejimo variantai ant TU PACIU signalu.
+
+    Skiriasi tik isejimas. Todel skirtumas tarp eiluciu yra grynas isejimo
+    taisykles indelis - ne kitokie signalai, ne kitos dienos.
+    """
+    g = df[df["tipas"] == 1] if "tipas" in df else df
+    if g.empty or "v_T05_pct" not in g:
+        return
+    print("\n  ISEJIMO VARIANTAI (1 scenarijus, tie patys signalai)")
+    print(f"    {'variantas':<12}{'N':>6}{'tiksl':>7}{'stop':>7}{'laikas':>8}"
+          f"{'vid %':>8}{'EUR':>9}{'95% EUR':>19}")
+    rng = np.random.default_rng(42)
+    for vn in ISEJIMO_VARIANTAI:
+        pc, bg = f"v_{vn}_pct", f"v_{vn}_baigtis"
+        if pc not in g:
+            continue
+        gg = g.dropna(subset=[pc])
+        if gg.empty:
+            continue
+        eur = gg[pc] / 100 * POZICIJA - SANAUDOS_EUR
+        pdd = gg.assign(eur=eur).groupby("sesija")["eur"].mean().values
+        if len(pdd) >= 10:
+            bs = [rng.choice(pdd, len(pdd), replace=True).mean() for _ in range(2000)]
+            lo, hi = np.percentile(bs, [2.5, 97.5])
+        else:
+            lo = hi = float("nan")
+        print(f"    {vn:<12}{len(gg):>6}"
+              f"{(gg[bg]=='tikslas').mean()*100:>6.1f}%"
+              f"{(gg[bg]=='stop').mean()*100:>6.1f}%"
+              f"{(gg[bg]=='laikas').mean()*100:>7.1f}%"
+              f"{gg[pc].mean():>8.2f}{eur.mean():>9.2f}"
+              f"  [{lo:>6.2f},{hi:>6.2f}]{'  <<<' if lo > 0 else ''}")
 
 
 def pjuviai(df):
@@ -1252,6 +1344,7 @@ def ataskaita(ivykiai, zyme, trumpai=False):
               f"{g['mfe_pct'].mean():>8.2f}{g['mae_pct'].mean():>8.2f}"
               f"{g['minuciu'].median()/60:>6.1f}  [{lo:>6.2f},{hi:>6.2f}]"
               f"{'  <<<' if lo > 0 else ''}")
+    variantu_lentele(df)
     if trumpai:
         return
     pjuviai(df)
@@ -1357,25 +1450,31 @@ def savitikra():
         print(f"         ieina {s['ieina']:.2f}  tikslas {s['tikslas']:.2f}  "
               f"stop {s['stop']:.2f}  R:R {s.get('rr', float('nan')):.2f}  "
               f"kliutys: {s['kliutys'] or 'nera'}")
-        tikrinti("         tikslas yra 5 d. virsune 138.26",
-                 round(s["tikslas"], 2) == 138.26, True)
+        tikrinti("         tikslas = iejimas + 0.5 ATR (konservatyvus)",
+                 round(s["tikslas"], 2), round(s["ieina"] + 0.5 * 3.0, 2))
+        tikrinti("         rizika neviršija 0.5 ATR",
+                 round(s["ieina"] - s["stop"], 2) <= round(0.5 * 3.0, 2) + 1e-9, True)
+        tikrinti("         R:R = 1.00 (tikslas 0.5 ATR / rizika 0.5 ATR)",
+                 round(s["rr"], 2), 1.00)
 
-    # --- tikslo ribojimas pagal pasiekiamuma (Manto 2 pastaba) ------------
-    # Ta pati SAP situacija, bet buves lygis 5 ATR virs iejimo: tikslas
-    # privalo susitraukti iki to, kas telpa per HORIZONTAS_SESIJU.
+    # --- tolimas buves lygis NEBEDIDINA tikslo -----------------------------
+    # Konservatyvus tikslas nuo buvusio lygio nepriklauso, kol tas lygis toli.
     k_toli = kd(128.32, 3.0, 152.00, 0.17, 127.50)
     s_toli = pirmas_signalas(scenarijus_1, atsok, k_toli)
-    tikrinti("tolimas tikslas ribojamas pagal ATR ir horizonta",
-             bool(s_toli) and s_toli["tikslas_ribotas"], True)
-    if s_toli:
-        print(f"         pilnas lygis {s_toli['R_pilnas']:.2f} "
-              f"({s_toli['kelias_atr']:.1f} ATR) -> tikslas "
-              f"{s_toli['tikslas']:.2f}  rizika "
-              f"{s_toli['rizika_eur']:.0f} EUR")
-        tikrinti("         tikslas = iejimas + 3 ATR",
-                 abs(s_toli["tikslas"] - (s_toli["ieina"] + 3 * 3.0)) < 0.01, True)
-    tikrinti("artimas tikslas NEribojamas (SAP etalonas)",
-             bool(s) and not s["tikslas_ribotas"], True)
+    tikrinti("buves lygis 8 ATR toliau - tikslas vis tiek 0.5 ATR",
+             bool(s_toli) and round(s_toli["tikslas"], 2) ==
+             round(s_toli["ieina"] + 0.5 * 3.0, 2), True)
+
+    # --- artimas buves lygis APKARPO tiksla ir signalas krinta per R:R ----
+    k_arti = kd(128.32, 3.0, 131.60, 0.17, 127.50)   # kritimas 1.09 ATR,
+                                                 # bet lygis tik 0.24 ATR virs iejimo
+    s_arti = pirmas_signalas(scenarijus_1, atsok, k_arti)
+    if s_arti:
+        print(f"         artimas lygis {s_arti['R_pilnas']:.2f} -> tikslas "
+              f"{s_arti['tikslas']:.2f}  R:R {s_arti['rr']:.2f}  "
+              f"kliutys: {s_arti['kliutys'] or 'nera'}")
+    tikrinti("artimas buves lygis: tikslas apkarpomas ir R:R blokuoja",
+             bool(s_arti) and len(s_arti["kliutys"]) > 0, True)
 
     # --- ADYEN etalonas: 08-12 uzdare 910.00, 08-13 atidare 962.00 --------
     # (pirma savitikros versija cia turejo 930.30 - tai 08-07 uzdarymas, ne
@@ -1491,10 +1590,19 @@ def savitikra():
              baigtis(bb([]).iloc[:0], s1f)["baigtis"], "laikas")
 
     # --- tikslas negali buti zemiau iejimo -------------------------------
-    k_zem = kd(128.32, 3.0, 131.00, 0.17, 127.50)   # 5 d. virsune tik 131.00
-    aukstai = sesija(133.00, np.r_[np.full(6, -0.001), np.full(24, 0.0012)])
-    tikrinti("kai kaina jau virs buvusio lygio - signalo NERA (ne neigiamas R:R)",
-             pirmas_signalas(scenarijus_1, aukstai, k_zem) is None, True)
+    # Atidarymas BE tarpo (128.60 vs vakar 128.32 = 0.09 ATR), kritimas 1.09 ATR,
+    # bet kaina nubega VIRS buvusio lygio 131.60. Pirma sio testo versija turejo
+    # atidaryma 133.00 = 1.56 ATR tarpas, tad scenarijus_1 nukrisdavo dar ties
+    # tarpo filtru ir testas praeidavo NET ISJUNGUS tikrinama patikra.
+    k_zem = kd(128.32, 3.0, 131.60, 0.17, 127.50)
+    aukstai = sesija(128.60, np.r_[np.full(6, 0.0005), np.full(30, 0.0025)])
+    # tikrinam PASKUTINI bara (kaina jau virs lygio), ne pirma: ankstyvuose
+    # baruose kaina dar zemiau lygio ir signalas ten visiskai teisetas.
+    pask = float(aukstai["Close"].iloc[-1])
+    tikrinti("         bandomoji kaina tikrai virs buvusio lygio",
+             pask > 131.60, True)
+    tikrinti("kai kaina nubega virs buvusio lygio - signalo NERA",
+             scenarijus_1(aukstai, k_zem) is None, True)
 
     # --- zurnalas: tuscia reiksme is CSV neturi reiksti "uzdaryta" -------
     import io
@@ -1506,6 +1614,59 @@ def savitikra():
                         keep_default_na=False)
     tikrinti("zurnalo tuscia 'baigtis' nuskaitoma kaip tuscia, ne kaip nan",
              str(atgal["baigtis"].iloc[0] or ""), "")
+
+    # --- isejimo variantai: nuo ju priklauso isejimo sprendimas ----------
+    kyl = bb([[100.0, 100.8, 99.9, 100.6], [100.6, 101.4, 100.4, 101.2],
+              [101.2, 102.4, 101.0, 102.2], [102.2, 102.6, 100.2, 100.4],
+              [100.4, 100.6,  99.0,  99.2]])
+    sbaze = dict(tipas=1, ieina=100.0, tikslas=101.0, stop=99.0, atr_abs=2.0,
+                 L=99.6, R=101.0, R_pilnas=140.0)
+    pries = dict(sbaze)
+    v = isejimo_variantai(kyl, sbaze)
+    tikrinti("isejimo_variantai NEKEICIA originalaus signalo", sbaze == pries, True)
+    tikrinti("T05 sutampa su pagrindiniu baigtis() (tas pats tikslas)",
+             round(v["T05"]["pelnas_pct"], 4),
+             round(baigtis(kyl, sbaze)["pelnas_pct"], 4))
+    tikrinti("T10 tikslas tolimesnis -> kitas rezultatas nei T05",
+             v["T10"]["pelnas_pct"] != v["T05"]["pelnas_pct"], True)
+    tikrinti("SL neturi tikslo (niekada 'tikslas')",
+             v["SL"]["baigtis"] != "tikslas", True)
+    tikrinti("SL naudoja PLATU struktūrini stop'a, ne kortelės",
+             isejimo_variantai(kyl, sbaze) is not None and
+             baigtis(kyl, dict(sbaze, tipas=2, tikslas=None,
+                               stop=sbaze["L"] - S1_STOP_ATR * 2.0))["pelnas_pct"]
+             == v["SL"]["pelnas_pct"], True)
+    tikrinti("visi trys variantai grazinami",
+             sorted(v) == sorted(ISEJIMO_VARIANTAI), True)
+
+    # SL platus stop'as: rizikos riba prisisotinusi, tad kortelės stop'as (99.0)
+    # yra AUKSCIAU uz struktūrini (97.4). Barai nukrenta iki 98.5 - kortele
+    # issimuse, SL turi islikti.
+    plat = bb([[100.0, 100.4, 98.5, 99.0], [99.0, 101.0, 98.9, 100.8],
+               [100.8, 101.6, 100.4, 101.4]])
+    sp = dict(tipas=1, ieina=100.0, tikslas=101.0, stop=99.0, atr_abs=2.0,
+              L=98.0, R=101.0, R_pilnas=140.0)
+    vp = isejimo_variantai(plat, sp)
+    tikrinti("kortelės stop'as (99.0) issimusa ties 98.5",
+             baigtis(plat, sp)["baigtis"], "stop")
+    tikrinti("SL platus stop'as (97.4) tame paciame bare ISLIEKA",
+             vp["SL"]["baigtis"] != "stop", True)
+
+    # R:R riba: tikros kainos, kur (t-k)/(k-s) dvigubame tikslume < 1.0
+    for kk, aa in ((261.50849255278456, 11.657260123286084),
+                   (126.41480575695486, 9.938104626893272)):
+        sr = dict(ieina=kk, tikslas=kk + 0.5*aa, stop=kk - 0.5*aa)
+        kl = _bendra(sr, kd(kk, aa, kk + 5*aa, 0.1, kk - 2*aa))
+        tikrinti(f"R:R riba nebetrapi ties kaina {kk:.2f}",
+                 any("R:R" in x for x in kl), False)
+
+    tikrinti("zurnalas raso atr_abs tiesiogiai, ne atkurineja is atr_pct",
+             'float(r["atr_abs"])' in inspect.getsource(zurnalas_atnaujinti)
+             and "atr_abs" in ZURNALO_STULPELIAI, True)
+
+    tuscias = pd.DataFrame()
+    variantu_lentele(tuscias)                      # neturi luzti
+    tikrinti("variantu_lentele nelūžta su tusciu df", True, True)
 
     print("-" * 60)
     print("SAVITIKRA: " + ("VISKAS GERAI" if ok else "YRA KLAIDU"))
