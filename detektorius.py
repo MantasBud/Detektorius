@@ -794,6 +794,10 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 <footer>
   Pozicija 18&nbsp;000&nbsp;€, sąnaudos 10&nbsp;€ už ciklą (lūžio taškas 0,0556&nbsp;%).
   Horizontas 3 sesijos, pozicija nešama per naktį.<br>
+  <b>iki lygio</b> — kiek ATR nuo įėjimo iki buvusio lygio. Kalibracijoje
+  signalai, kur šis dydis &lt; 1 ATR, prarado pinigus <b>abiejose</b> rinkose
+  (−35 € EU, −37 € JAV) — vienintelis pjūvis, sutapęs abiejose. Todėl toks
+  ženkliukas gintaro spalvos. Tai įspėjimas, ne filtras.<br>
   Ištisinė juosta — tikslas struktūrinis (žinomas kainos lygis). Punktyrinė —
   <b>vertinimas</b>: ralio tikslo nėra, rodoma, kiek nueita ATR vienetais.
   Juostos spalva rodo kliūtis, ne progresą.<br>
@@ -832,6 +836,7 @@ function kortele(s){
   if (s.rizika_eur) zenkl.push(`<span class="z2">rizika ${Math.round(s.rizika_eur)} €</span>`);
   if (s.atr_pct) zenkl.push(`<span class="z2">ATR ${nr(s.atr_pct,1)}%</span>`);
   if (s.kritimas_atr) zenkl.push(`<span class="z2">krito ${nr(s.kritimas_atr,1)} ATR</span>`);
+  if (s.kelias_atr) zenkl.push(`<span class="z2 ${Number(s.kelias_atr) < 1 ? 'kliutis' : ''}">iki lygio ${nr(s.kelias_atr,1)} ATR</span>`);
   if (s.tarpas_atr) zenkl.push(`<span class="z2">tarpas ${nr(s.tarpas_atr,1)} ATR</span>`);
   zenkl.push(`<span class="z2">${amzius(s.amzius_min)}</span>`);
   if (s.tikslas_ribotas) zenkl.push(`<span class="z2">tikslas ribotas</span>`);
