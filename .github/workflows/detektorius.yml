@@ -50,4 +50,7 @@ jobs:
           git add -A docs
           [ -f busena.json ] && git add busena.json || true
           [ -f dividendai.json ] && git add dividendai.json || true
+          # Ataskaitu datos: be sito failo live rezimas kas paleidima
+          # klaustu is naujo, ir saltinis mus apribotu.
+          [ -f ataskaitos.json ] && git add ataskaitos.json || true
           git diff --cached --quiet || (git commit -m "Detektorius" && git push)
