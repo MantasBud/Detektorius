@@ -96,8 +96,9 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -336,6 +337,86 @@ def dividendu_kalendorius(tickers):
     return rez
 
 
+ATASKAITU_TALPYKLA = "ataskaitos.json"
+_ATASK = None           # {tickeris: {"datos": [...], "kada": iso}}
+
+
+def _ataskaitu_talpykla():
+    global _ATASK
+    if _ATASK is None:
+        _ATASK = {}
+        if os.path.exists(ATASKAITU_TALPYKLA):
+            try:
+                with open(ATASKAITU_TALPYKLA, encoding="utf-8") as f:
+                    t = json.load(f)
+                if isinstance(t, dict):
+                    _ATASK = {k: v for k, v in t.items()
+                              if isinstance(v, dict) and "datos" in v}
+            except Exception:
+                _ATASK = {}
+    return _ATASK
+
+
+def ataskaitu_kalendorius(tickers):
+    """Istorines ir busimos ataskaitu datos, po viena uzklausa tickeriui.
+
+    Tai VIENINTELE naujienu rusis, kuria galima patikrinti atgal: antrasciu
+    su laiko zymemis ir sentimentu istorijos musu saltinis neturi, tad joks
+    sentimento filtras nebutu patikrinamas - o nepatikrinamu filtru sitas
+    projektas jau turejo per daug.
+
+    Talpykla PER TICKERI (ne per visa faila): live rezimas kviecia ja tik
+    toms akcijoms, kurios turi signala, tad 357 uzklausos kas 5 minutes
+    niekada nedaromos. Galiojimas - savaite, kaip ir dividendams.
+    """
+    tal = _ataskaitu_talpykla()
+    dabar = datetime.now()
+    truksta = []
+    for t in tickers:
+        v = tal.get(t)
+        if not v:
+            truksta.append(t)
+            continue
+        try:
+            if (dabar - datetime.fromisoformat(v["kada"])).days >= 7:
+                truksta.append(t)
+        except Exception:
+            truksta.append(t)
+    if not truksta:
+        return {k: tal[k]["datos"] for k in tickers if k in tal}
+    print(f"  ataskaitu kalendorius: {len(truksta)} naujos uzklausos "
+          f"({len(tickers) - len(truksta)} is talpyklos)")
+    klaidu = 0
+    for t in truksta:
+        datos = []
+        try:
+            e = yf.Ticker(t).earnings_dates
+            if e is not None and len(e):
+                datos = sorted({str(x.date()) for x in e.index})[-12:]
+        except Exception:
+            klaidu += 1
+        tal[t] = dict(datos=datos, kada=dabar.isoformat())
+    if klaidu:
+        print(f"    ({klaidu} tickeriu ataskaitu datu negauta - laukas liks NaN)")
+    try:
+        with open(ATASKAITU_TALPYKLA, "w", encoding="utf-8") as f:
+            json.dump(tal, f, ensure_ascii=False, indent=1)
+    except Exception:
+        pass
+    return {k: tal[k]["datos"] for k in tickers if k in tal}
+
+
+def dienu_iki_ataskaitos(datos, ses):
+    """Arciausios ataskaitos atstumas dienomis (neigiamas - jau buvo)."""
+    if not datos:
+        return np.nan
+    try:
+        d = [date.fromisoformat(x) for x in datos]
+        return min(((x - ses).days for x in d), key=abs)
+    except Exception:
+        return np.nan
+
+
 def sesijos_rodikliai(barai, rinka):
     d = barai.copy()
     try:
@@ -357,6 +438,73 @@ def sesijos_rodikliai(barai, rinka):
     d["apyv_santykis"] = d["Volume"] / d["apyv_tipine"].replace(0, np.nan)
     d.drop(columns=["_pv"], inplace=True)
     return d
+
+
+def _fono_laukai(fonas, laikas, sd, i):
+    """Rinkos fono laukai signalui. Tik matavimui - niekas neblokuojama."""
+    out = dict(rinkos_pokytis=np.nan, platumas=np.nan, plat_d30=np.nan,
+               santykinis=np.nan)
+    try:
+        if fonas is None or fonas.empty or laikas not in fonas.index:
+            return out
+        r = fonas.loc[laikas]
+        out["rinkos_pokytis"] = float(r.get("mediana", np.nan))
+        out["platumas"] = float(r.get("platumas", np.nan))
+        out["plat_d30"] = float(r.get("plat_d30", np.nan))
+        atid = float(sd["ses_atidarymas"].iloc[i])
+        if atid > 0:
+            savo = (float(sd["Close"].iloc[i]) / atid - 1.0) * 100
+            out["santykinis"] = savo - out["rinkos_pokytis"]
+    except Exception:
+        pass
+    return out
+
+
+def rinkos_fonas(barai, rod):
+    """Rinkos fonas kiekvienam 5 min laikui - is TU PACIU baru, be papildomu
+    uzklausu.
+
+    Projekto tvirciausias radinys per visa istorija: rinkos rezimas svarbesnis
+    uz akciju atranka apie 10 kartu (1.05 p.p. skirtumas). Senasis rezimo
+    filtras buvo isimtas, nes jis (a) atejo is reitinguotojo ir (b) naudojo
+    TOS DIENOS uzdaryma, t.y. ateiti. Sitas - kitoks: jis skaiciuojamas tik
+    is baru IKI to laiko, skerspjuviu per visas akcijas.
+
+    Grazina DataFrame su stulpeliais:
+      mediana   - universo mediana nuo sesijos atidarymo, %
+      platumas  - kiek % universo siuo metu VIRS vakarykscio uzdarymo
+      plat_d30  - platumo pokytis per paskutines 30 min
+    """
+    pok, virs = [], []
+    for t, d in barai.items():
+        if not len(d):
+            continue
+        atid = d["ses_atidarymas"].replace(0, np.nan)
+        pok.append(pd.Series((d["Close"] / atid - 1.0).values * 100, index=d.index))
+        r = rod.get(t)
+        if r is None:
+            continue
+        vu = {}
+        for ses in d["sesija"].unique():
+            k = _kd(r, ses)
+            if k is not None:
+                vu[ses] = float(k["uzdarymas"])
+        if not vu:
+            continue
+        v = d["sesija"].map(vu).values.astype(float)
+        virs.append(pd.Series((d["Close"].values > v).astype(float), index=d.index))
+    if not pok:
+        return pd.DataFrame()
+    f = pd.DataFrame({"mediana": pd.concat(pok, axis=1).median(axis=1)}).sort_index()
+    if virs:
+        f["platumas"] = pd.concat(virs, axis=1).mean(axis=1).sort_index() * 100
+        # 30 min = 6 barai, bet TIK toje pacioje sesijoje. Pirmoji versija
+        # skaiciavo .diff(6) per visa stulpeli: pirmi 6 dienos barai buvo
+        # lyginami su PRAEJUSIOS dienos pabaiga, t.y. su nakties tarpu.
+        # Be to diff buvo skaiciuojamas PRIES sort_index().
+        ses = pd.Index([x.date() for x in f.index], name="ses")
+        f["plat_d30"] = f.groupby(ses)["platumas"].diff(6).values
+    return f
 
 
 # ================================================ scenarijai (grynos funkcijos)
@@ -460,6 +608,14 @@ def scenarijus_1(langas, kd):
                progresas=(kaina - L) / (R_pilnas - L) if R_pilnas > L else 0.0,
                progresas_tikslus=True, kritimas_atr=kritimas / atr,
                atsiemimas_atr=(kaina - vakar_uzd) / atr,
+               # kiek baru praejo nuo sesijos dugno: sviezias apsisukimas
+               # ar jau senas
+               baru_nuo_dugno=int(len(langas) - 1
+                                  - int(np.argmin(langas["Low"].values))),
+               # kiek kartu SIANDIEN kaina jau buvo atsiemusi lygi ir vel ji
+               # prarado - kiekviena nesekme silpnina kita bandyma
+               nesekmes=int(((langas["Close"].values[:-1] > vakar_uzd)
+                             & (langas["Close"].values[1:] <= vakar_uzd)).sum()),
                # TIK puslapiui. I "kliutys" NEdedama tycia: kitaip pasikeistu
                # "tinkamas", o su juo - kalibracijos imtis, ir nebegaletume
                # patikrinti, ar slepti buvo teisinga.
@@ -1175,6 +1331,7 @@ def paleisti_live(rinkos):
     for rinka in rinkos:
         zyme = RINKOS[rinka]["zyme"]
         rod, barai = parsisiusti(rinka, LIVE_DIENOS)
+        fonas = rinkos_fonas(barai, rod)
         div = dividendu_kalendorius(list(barai))
         for t, d in barai.items():
             visi_barai[(zyme, t)] = d
@@ -1203,11 +1360,21 @@ def paleisti_live(rinkos):
                                pd.Timestamp(s["pirmas_kartas"])).total_seconds() // 60)
                 except Exception:
                     amz = 0
+                s.update(_fono_laukai(fonas, d.index[-1], sesija, len(sesija) - 1))
                 s.update(rinka=zyme, tickeris=t, laikas=dabar,
                          sesija_data=str(ses),
                          atr_pct=float(kd["atr_pct"]), amzius_min=amz,
-                         dividendas=div.get(t))
+                         dividendas=div.get(t), _ses=ses)
                 eilutes.append(s)
+
+    # Ataskaitu datos - TIK toms akcijoms, kurios turi signala. Bendram
+    # universui tai butu 357 uzklausos kas 5 minutes, t.y. garantuotas
+    # apribojimas is saltinio puses.
+    if eilutes:
+        ats = ataskaitu_kalendorius(sorted({e["tickeris"] for e in eilutes}))
+        for e in eilutes:
+            e["iki_ataskaitos"] = dienu_iki_ataskaitos(ats.get(e["tickeris"]),
+                                                       e.pop("_ses"))
 
     # Valom pagal paskutine SKENUOTA sesija, ne pagal konteinerio data:
     # savaitgali ar pries atidaryma jos nesutampa, ir busena buvo trinama
@@ -1246,7 +1413,11 @@ def paleisti_kalibracija(rinkos, dienos):
     for rinka in rinkos:
         zyme = RINKOS[rinka]["zyme"]
         print(f"\n{'='*84}\n{zyme}\n{'='*84}")
+        _MATAVIMAI.extend([f"{zyme} matyta", f"{zyme} NEMATYTA"])
         rod, barai = parsisiusti(rinka, dienos)
+        fonas = rinkos_fonas(barai, rod)
+        print(f"  rinkos fonas: {len(fonas)} laiko tasku")
+        atask = ataskaitu_kalendorius(list(barai))
 
         ivykiai = []
         for t, d in barai.items():
@@ -1277,6 +1448,9 @@ def paleisti_kalibracija(rinkos, dienos):
                                  atr_pct=float(kd["atr_pct"]),
                                  minute=int(sd["minute"].iloc[i]),
                                  pradzia_bare=i, baru_sesijoje=len(sd))
+                        s.update(_fono_laukai(fonas, sd.index[i], sd, i))
+                        s["iki_ataskaitos"] = dienu_iki_ataskaitos(
+                            atask.get(t), ses)
                         ivykiai.append(s)
 
         if _KLAIDOS:
@@ -1289,9 +1463,12 @@ def paleisti_kalibracija(rinkos, dienos):
             ses = sorted({e["sesija"] for e in ivykiai})
             riba = ses[len(ses) // 2]
             print(f"\n  ---- {zyme}: 1-A PUSE (iki {riba}) ----")
+            _DALIS[0] = f"{zyme} matyta"
             ataskaita([e for e in ivykiai if e["sesija"] <= riba], zyme, True)
             print(f"\n  ---- {zyme}: 2-A PUSE (NEMATYTA) ----")
+            _DALIS[0] = f"{zyme} NEMATYTA"
             ataskaita([e for e in ivykiai if e["sesija"] > riba], zyme, True)
+            _DALIS[0] = ""
 
 
 def vienalaikiskumas(df):
@@ -1382,7 +1559,12 @@ def kandidato_testas(df):
               f"  [{lo:>6.2f},{hi:>6.2f}]{'  <<<' if lo > 0 else ''}")
 
 
-def pjuviai(df):
+_KAND_REZ = {}          # (pjuvis, matavimas) -> (apacia EUR, virsus EUR, N)
+_DALIS = [""]           # kurio matavimo dabar esame (nustato ataskaita())
+_MATAVIMAI = []         # kurie matavimai TUREJO ivykti (nustato kalibracija)
+
+
+def pjuviai(df, tik_kandidatai=False):
     """KANDIDATAI I FILTRUS (2 pakopa).
 
     Cia NIEKAS neblokuojama. Rodoma tik tam, kad matytusi, kuri riba galetu
@@ -1391,12 +1573,16 @@ def pjuviai(df):
     truko reitinguotojui: ten ribos buvo prielaidos, ne isvados.
     """
     print("\n  KANDIDATAI I FILTRUS (nieko neblokuoja - tik matoma)")
+    KAND = ("rinkos_pokytis", "platumas", "plat_d30", "santykinis",
+            "atsiemimas_atr", "baru_nuo_dugno", "nesekmes", "iki_ataskaitos")
     df = df.copy()
     df["eur"] = df["pelnas_pct"] / 100 * POZICIJA - SANAUDOS_EUR
     df["valanda"] = (df["minute"] // 60) if "minute" in df else np.nan
 
     def pjuvis(pav, stulp, kvantiliai=True):
         if stulp not in df or df[stulp].isna().all():
+            return
+        if tik_kandidatai and stulp not in KAND:
             return
         g = df.dropna(subset=[stulp]).copy()
         if kvantiliai:
@@ -1409,21 +1595,76 @@ def pjuviai(df):
         print(f"\n  {pav}")
         print(f"    {'grupe':<22}{'N':>6}{'vid EUR':>10}{'MFE %':>8}"
               f"{'tiksl':>7}{'stop':>7}")
+        kraštai = []
         for k, gg in g.groupby("_gr", observed=True):
             et = (f"{k.left:,.1f} .. {k.right:,.1f}"
                   if hasattr(k, "left") else str(k))
+            kraštai.append((float(gg["eur"].mean()), len(gg)))
             print(f"    {et:<22}{len(gg):>6}{gg['eur'].mean():>10.1f}"
                   f"{gg['mfe_pct'].mean():>8.2f}"
                   f"{(gg['baigtis']=='tikslas').mean()*100:>6.0f}%"
                   f"{(gg['baigtis']=='stop').mean()*100:>6.0f}%")
+        # Isaugom KRASTUS verdiktui. Riba priimama tik tada, kai tas pats
+        # skirtumas matomas visuose keturiuose matavimuose - be sito
+        # pjuviai butu tiesiog skaiciai, is kuriu galima issirinkti patinkanti.
+        if _DALIS[0] and stulp in KAND and len(kraštai) >= 2:
+            _KAND_REZ[(stulp, _DALIS[0])] = (kraštai[0][0], kraštai[-1][0],
+                                             sum(x[1] for x in kraštai))
 
     pjuvis("pagal ATR (ar didesnis judrumas kenkia, ar padeda?)", "atr_pct")
     pjuvis("pagal ATSIEMIMO dydi, ATR vienetais (peilio kandidatas)",
            "atsiemimas_atr")
+    pjuvis("pagal RINKOS pokyti (universo mediana nuo atidarymo, %)",
+           "rinkos_pokytis")
+    pjuvis("pagal PLATUMA (% universo virs vakar uzdarymo)", "platumas")
+    pjuvis("pagal PLATUMO pokyti per 30 min", "plat_d30")
+    pjuvis("pagal SANTYKINI stipruma (savo - rinkos, %)", "santykinis")
+    pjuvis("pagal baru NUO DUGNO", "baru_nuo_dugno")
+    pjuvis("pagal NESEKMIU skaiciu (kiek kartu jau prarado lygi)",
+           "nesekmes", kvantiliai=False)
+    pjuvis("pagal atstuma IKI ATASKAITOS (dienomis; <0 - jau buvo)",
+           "iki_ataskaitos")
     pjuvis("pagal kritimo gyli, ATR vienetais", "kritimas_atr")
     pjuvis("pagal kelia iki buvusio lygio, ATR vienetais", "kelias_atr")
     pjuvis("pagal rizika eurais", "rizika_eur")
     pjuvis("pagal iejimo valanda", "valanda", kvantiliai=False)
+
+
+def kandidatu_verdiktas():
+    """Ar kandidatas laikosi VISUOSE keturiuose matavimuose?
+
+    Keturi matavimai = (EU, JAV) x (matyta puse, NEMATYTA puse). Filtras
+    priimamas tik tada, kai auksciausio ir zemiausio ketvircio skirtumas
+    turi TA PACIA krypti visur ir niekur nera mazesnis uz sanaudas.
+    Butent sito zingsnio truko reitinguotojui.
+    """
+    if not _KAND_REZ:
+        return
+    # Matavimu sarasas imamas is to, kas TUREJO ivykti, o ne is to, kas
+    # pavyko. Kitaip rinka be signalu tiesiog dingsta is lenteles, ir
+    # kandidatas gauna "TINKA" turedamas tris matavimus is keturiu -
+    # butent taip ir atsitiko pirmame bandyme 2026-09-28.
+    matavimai = _MATAVIMAI or sorted({m for _, m in _KAND_REZ})
+    print("\n" + "=" * 84)
+    print("KANDIDATU VERDIKTAS (skirtumas: virsutinis ketvirtis - apatinis, EUR)")
+    print("=" * 84)
+    print(f"  {'kandidatas':<18}" + "".join(f"{m:>15}" for m in matavimai)
+          + f"{'  verdiktas':>14}")
+    for k in sorted({k for k, _ in _KAND_REZ}):
+        sk = [_KAND_REZ.get((k, m)) for m in matavimai]
+        eil = "".join(f"{(x[1]-x[0]):>15.1f}" if x else f"{'-':>15}" for x in sk)
+        turim = [x for x in sk if x]
+        if len(turim) < len(matavimai) or any(x[2] < 40 for x in turim):
+            v = "per mazai duomenu"
+        else:
+            d = [x[1] - x[0] for x in turim]
+            v = ("TINKA" if (all(y > SANAUDOS_EUR for y in d)
+                             or all(y < -SANAUDOS_EUR for y in d))
+                 else "nelaikosi")
+        print(f"  {k:<18}{eil}  {v}")
+    print("\n  TINKA reiskia: kryptis ta pati visur IR skirtumas didesnis uz")
+    print("  sanaudas (10 EUR). Tik tokia riba gali tapti filtru. 'nelaikosi'")
+    print("  reiskia, kad puseje matavimu zenklas kitoks - t.y. tai triuksmas.")
 
 
 def ataskaita(ivykiai, zyme, trumpai=False):
@@ -1461,6 +1702,7 @@ def ataskaita(ivykiai, zyme, trumpai=False):
     variantu_lentele(df)
     kandidato_testas(df)
     if trumpai:
+        pjuviai(df, tik_kandidatai=True)
         return
     pjuviai(df)
     print(f"\n  Pozicija {POZICIJA:.0f} EUR, sanaudos {SANAUDOS_EUR:.0f} EUR "
@@ -1890,6 +2132,174 @@ def savitikra():
     tikrinti("zurnalo horizontas TIKRAI 3 sesijos (ne savireferencija)",
              len(set(po["sesija"])), 3)
 
+    # --- RINKOS FONAS ir ATASKAITOS (3-4 punktai) -------------------------
+    # Fonas skaiciuojamas is TU PACIU baru, tad pagrindine rizika - ateitis.
+    # Testuojama elgsena, ne buvimas: jeigu fonas imtu tos dienos uzdaryma
+    # arba visos dienos vidurki, sie testai nukristu.
+    def _kelias(atid, eiga):
+        k = atid * np.cumprod(1 + np.asarray(eiga))
+        pr = pd.Timestamp("2026-07-24 09:00", tz="Europe/Berlin")
+        eil = [(pr + pd.Timedelta(minutes=5 * j),
+                atid if j == 0 else k[j - 1], k[j] * 1.001, k[j] * 0.999,
+                k[j], 5e5) for j in range(len(k))]
+        raw = pd.DataFrame(eil, columns=["_t", "Open", "High", "Low", "Close",
+                                         "Volume"]).set_index("_t")
+        return sesijos_rodikliai(raw, "eu")
+
+    # A kyla visa diena, B krenta visa diena -> mediana ~0, platumas 50%
+    kylantis = _kelias(100.0, np.full(12, 0.002))
+    krentantis = _kelias(100.0, np.full(12, -0.002))
+    rodA = pd.DataFrame(dict(uzdarymas=100.0, atr_abs=2.0, atr_pct=2.0,
+                             apyvarta=5e7, uzd_vieta=0.5, virsune_n=110.0,
+                             dugnas_n=90.0, div_lange=0.0),
+                        index=[pd.Timestamp("2026-07-24")])
+    fon = rinkos_fonas({"A": kylantis, "B": krentantis}, {"A": rodA, "B": rodA})
+    tikrinti("rinkos fonas turi po eilute kiekvienam 5 min bar'ui",
+             len(fon), len(kylantis))
+    # simetriski keliai: sudetinis augimas duoda ~0.03 p.p. asimetrija
+    tikrinti("priesingi keliai duoda ~0 rinkos mediana",
+             abs(float(fon["mediana"].iloc[-1])) < 0.05, True)
+    tikrinti("platumas: viena akcija virs, kita zemiau -> 50%",
+             round(float(fon["platumas"].iloc[-1])), 50)
+    # ATEITIES PATIKRA. Pirma sio testo versija turejo "or", tad praeidavo
+    # net ir tada, kai fonui priskirdavau visos dienos paskutine reiksme
+    # (mutacijos testas 2026-09-28). Dabar tikrinama KIEKVIENO taško verte.
+    vien = rinkos_fonas({"A": kylantis}, {"A": rodA})
+    lauk = [round((float(kylantis["Close"].iloc[j]) /
+                   float(kylantis["ses_atidarymas"].iloc[j]) - 1) * 100, 6)
+            for j in range(len(kylantis))]
+    gauta = [round(float(x), 6) for x in vien["mediana"].values]
+    tikrinti("fonas KIEKVIENAME tashke = to meto skerspjuvis (ne ateitis)",
+             gauta, lauk)
+    tikrinti("         ir pirmas taskas skiriasi nuo paskutinio",
+             gauta[0] != gauta[-1], True)
+    # plat_d30 per SESIJU RIBA. Dvi sesijos: pirma visi virs, antra visi
+    # zemiau vakar uzdarymo. Jei diff skaiciuojamas per visa stulpeli (taip
+    # ir buvo iki 2026-09-28), antros sesijos pradzioje atsiranda -100 -
+    # nakties tarpas, apsimetantis dienos platumo pokyciu.
+    dvi = pd.concat([_kelias(100.0, np.full(12, 0.002)),
+                     _kelias(100.0, np.full(12, -0.002)).set_index(
+                         _kelias(100.0, np.full(12, -0.002)).index
+                         + pd.Timedelta(days=1))])
+    dvi["sesija"] = [x.date() for x in dvi.index]
+    rod2 = pd.DataFrame(dict(uzdarymas=100.0, atr_abs=2.0, atr_pct=2.0,
+                             apyvarta=5e7, uzd_vieta=0.5, virsune_n=110.0,
+                             dugnas_n=90.0, div_lange=0.0),
+                        index=pd.DatetimeIndex(["2026-07-24", "2026-07-25"]))
+    f2 = rinkos_fonas({"A": dvi}, {"A": rod2})
+    antros = f2[[x.date() == date(2026, 7, 25) for x in f2.index]]
+    tikrinti("plat_d30 sesijos pradzioje yra NaN, ne nakties tarpas",
+             bool(antros["plat_d30"].iloc[:6].isna().all()), True)
+    tikrinti("         ir fonas grazinamas surikiuotas pagal laika",
+             bool(f2.index.is_monotonic_increasing), True)
+
+    fA = _fono_laukai(fon, kylantis.index[-1], kylantis, len(kylantis) - 1)
+    fB = _fono_laukai(fon, krentantis.index[-1], krentantis, len(krentantis) - 1)
+    tikrinti("santykinis stiprumas kylanciai akcijai TEIGIAMAS",
+             fA["santykinis"] > 0, True)
+    tikrinti("               ir krentanciai NEIGIAMAS", fB["santykinis"] < 0, True)
+    tikrinti("santykinis = savo pokytis - rinkos pokytis",
+             round(fA["santykinis"] + fB["santykinis"], 6), 0.0)
+    tikrinti("nezinomas laikas duoda NaN, o ne nuli (ir nenulauzia)",
+             bool(np.isnan(_fono_laukai(fon, pd.Timestamp("1999-01-01",
+                   tz="Europe/Berlin"), kylantis, 0)["rinkos_pokytis"])), True)
+    tikrinti("tuscias fonas nenulauzia",
+             bool(np.isnan(_fono_laukai(pd.DataFrame(), kylantis.index[0],
+                                        kylantis, 0)["platumas"])), True)
+
+    _KAND_REZ.clear()
+    for m in ("EU matyta", "EU NEMATYTA", "JAV matyta", "JAV NEMATYTA"):
+        _KAND_REZ[("santykinis", m)] = (-40.0, 30.0, 200)    # visur teigiamas
+        _KAND_REZ[("platumas", m)] = (-40.0, 30.0, 200)
+        _KAND_REZ[("nesekmes", m)] = (0.0, 3.0, 200)         # per mazas
+    _KAND_REZ[("platumas", "JAV NEMATYTA")] = (30.0, -40.0, 200)  # zenklas kitoks
+    _KAND_REZ[("plat_d30", "EU matyta")] = (0.0, 50.0, 200)  # truksta 3 matavimu
+    _MATAVIMAI[:] = ["EU matyta", "EU NEMATYTA", "JAV matyta", "JAV NEMATYTA"]
+    del _KAND_REZ[("santykinis", "JAV NEMATYTA")]   # visa rinka be signalu
+    import io as _io, contextlib as _cl
+    _b = _io.StringIO()
+    with _cl.redirect_stdout(_b):
+        kandidatu_verdiktas()
+    _t = _b.getvalue()
+    tikrinti("verdiktas: DINGES matavimas nepriimamas kaip TINKA",
+             "TINKA" in [x for x in _t.splitlines() if "santykinis" in x][0],
+             False)
+    _KAND_REZ[("santykinis", "JAV NEMATYTA")] = (-40.0, 30.0, 200)
+    _b = _io.StringIO()
+    with _cl.redirect_stdout(_b):
+        kandidatu_verdiktas()
+    _t = _b.getvalue()
+    tikrinti("verdiktas: visur ta pati kryptis + virs sanaudu -> TINKA",
+             "TINKA" in [x for x in _t.splitlines() if "santykinis" in x][0], True)
+    _KAND_REZ[("santykinis", "JAV NEMATYTA")] = (-40.0, 30.0, 12)
+    _b = _io.StringIO()
+    with _cl.redirect_stdout(_b):
+        kandidatu_verdiktas()
+    tikrinti("verdiktas: 12 ivykiu ketvirciuose - per mazai, ne TINKA",
+             "per mazai" in [x for x in _b.getvalue().splitlines()
+                             if "santykinis" in x][0], True)
+    tikrinti("verdiktas: vienoje puseje kitas zenklas -> nelaikosi",
+             "nelaikosi" in [x for x in _t.splitlines() if "platumas" in x][0], True)
+    tikrinti("verdiktas: skirtumas mazesnis uz sanaudas -> NE TINKA",
+             "TINKA" in [x for x in _t.splitlines() if "nesekmes" in x][0], False)
+    tikrinti("verdiktas: truksta matavimo -> pasakoma, o ne nutylima",
+             "per mazai duomenu" in _t, True)
+    _KAND_REZ.clear()
+
+    # talpykla: antras kvietimas NEBEEINA i tinkla
+    global _ATASK
+    _ATASK = {"X": dict(datos=["2026-07-26"], kada=datetime.now().isoformat()),
+              "Y": dict(datos=[], kada=(datetime.now() -
+                                        timedelta(days=9)).isoformat())}
+    kviesta = []
+    tikras_yf = globals().get("yf")
+    global ATASKAITU_TALPYKLA
+    tikras_kelias = ATASKAITU_TALPYKLA
+    ATASKAITU_TALPYKLA = os.path.join(tempfile.gettempdir(),
+                                      "savitikra_ataskaitos.json")
+
+    class _FakeYF:
+        @staticmethod
+        def Ticker(t):
+            kviesta.append(t)
+            raise RuntimeError("tinklo nera")
+    globals()["yf"] = _FakeYF
+    try:
+        r = ataskaitu_kalendorius(["X"])
+        tikrinti("ataskaitos: sviezias irasas imamas is talpyklos (be tinklo)",
+                 (kviesta, r), ([], {"X": ["2026-07-26"]}))
+        ataskaitu_kalendorius(["Y"])
+        tikrinti("ataskaitos: senesnis nei 7 d. irasas atnaujinamas",
+                 kviesta, ["Y"])
+        kviesta.clear()
+        ataskaitu_kalendorius(["Z"])
+        tikrinti("ataskaitos: nezinomas tickeris uzklausiamas", kviesta, ["Z"])
+        kviesta.clear()
+        ataskaitu_kalendorius(["Z"])
+        tikrinti("ataskaitos: nepavykusi uzklausa NEkartojama kas karta",
+                 kviesta, [])
+    finally:
+        globals()["yf"] = tikras_yf
+        _ATASK = None
+        try:
+            os.remove(ATASKAITU_TALPYKLA)
+        except OSError:
+            pass
+        ATASKAITU_TALPYKLA = tikras_kelias
+
+    ses_t = date(2026, 7, 24)
+    tikrinti("iki ataskaitos: rytojaus ataskaita -> +1",
+             dienu_iki_ataskaitos(["2026-07-25"], ses_t), 1)
+    tikrinti("                vakar buvusi -> -1",
+             dienu_iki_ataskaitos(["2026-07-23"], ses_t), -1)
+    tikrinti("                imama ARCIAUSIA is keliu",
+             dienu_iki_ataskaitos(["2026-01-05", "2026-07-26", "2026-11-02"],
+                                  ses_t), 2)
+    tikrinti("                be kalendoriaus -> NaN",
+             bool(np.isnan(dienu_iki_ataskaitos(None, ses_t))), True)
+    tikrinti("                sugadinta data nenulauzia",
+             bool(np.isnan(dienu_iki_ataskaitos(["blogai"], ses_t))), True)
+
     tikrinti("atkurti() su nepilna busena NEnulauzia",
              isinstance(_saugiai(atkurti, dict(s), {"laikas": "x"}, k_sap2, 131.0),
                         Exception), False)
@@ -1923,5 +2333,6 @@ if __name__ == "__main__":
     rinkos = ["eu", "us"] if a.rinka == "abi" else [a.rinka]
     if a.kalibracija:
         paleisti_kalibracija(rinkos, a.dienos)
+        kandidatu_verdiktas()
     else:
         paleisti_live(rinkos)
