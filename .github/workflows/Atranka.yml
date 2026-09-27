@@ -1,24 +1,25 @@
-name: Akciju atranka
+name: Universo atranka
+
+# Paleidziama RANKOMIS. Nieko neperrasо ir nieko nekomituoja - tik patikrina
+# kandidatus tikrais duomenimis ir atiduoda rezultata kaip artefakta.
+# Sprendima, ka pridèti i universas.py, priima Mantas, ne sis workflow.
 
 on:
   workflow_dispatch:
     inputs:
-      top:
-        description: "Kiek akciju i galutini saraso"
-        required: false
-        default: "45"
-      pozicija:
-        description: "Pozicijos dydis EUR"
-        required: false
-        default: "18000"
-      rodyti_visus:
-        description: "Rodyti ir neislaikiusius (taip/ne)"
-        required: false
-        default: "ne"
+      rinka:
+        description: "eu arba us"
+        required: true
+        default: "us"
+      saltinis:
+        description: "kandidatai.txt (failas repo saknyje) arba 'esami' dabartinio universo auditui"
+        required: true
+        default: "kandidatai.txt"
 
 jobs:
   atranka:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -26,28 +27,29 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Idiegti bibliotekas
-        run: pip install yfinance pandas numpy tzdata
+      - run: pip install yfinance pandas numpy tzdata
 
-      - name: Patikrinti ar failas vietoje
+      # Savitikra pirma: atranka naudoja detektoriaus ribas (min_atr_pct,
+      # min_apyvarta), tad jei detektorius pagedes, atranka atrinktu pagal
+      # sugedusias ribas ir to nesimatytu.
+      - name: Savitikra
+        run: python detektorius.py --savitikra
+
+      - name: Atranka
         run: |
-          ls -la
-          test -f atranka.py || (echo "KLAIDA: atranka.py nerastas repozitorijoje" && exit 1)
+          if [ "${{ github.event.inputs.saltinis }}" = "esami" ]; then
+            python atranka_universas.py --rinka "${{ github.event.inputs.rinka }}" \
+              --tik-esamus --out tinkami.txt | tee atranka.txt
+          else
+            test -f "${{ github.event.inputs.saltinis }}" || \
+              (echo "KLAIDA: kandidatu failo nera" && exit 1)
+            python atranka_universas.py --rinka "${{ github.event.inputs.rinka }}" \
+              --failas "${{ github.event.inputs.saltinis }}" --out tinkami.txt | tee atranka.txt
+          fi
 
-      - name: Paleisti atranka
-        env:
-          TOP: ${{ github.event.inputs.top || '45' }}
-          POZICIJA: ${{ github.event.inputs.pozicija || '18000' }}
-          VISI: ${{ github.event.inputs.rodyti_visus || 'ne' }}
-        run: |
-          FLAGS=""
-          if [ "$VISI" = "taip" ]; then FLAGS="--rodyti-visus"; fi
-          python atranka.py --top "$TOP" --pozicija "$POZICIJA" $FLAGS | tee atranka_rezultatas.txt
-
-      - name: Issaugoti rezultata
-        if: always()
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: atranka-rezultatas
-          path: atranka_rezultatas.txt
-          if-no-files-found: ignore
+          name: atranka-${{ github.event.inputs.rinka }}
+          path: |
+            atranka.txt
+            tinkami.txt
