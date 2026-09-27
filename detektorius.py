@@ -447,7 +447,7 @@ def scenarijus_1(langas, kd):
                          # filtras, o aritmetika: kitaip kortele rodytu tiksla
                          # ZEMIAU iejimo ir neigiama R:R.
     R = min(R_pilnas, kaina + S1_TIKSLAS_ATR * atr)
-    sig = dict(scenarijus="Kritimas ir apsisukimas", tipas=1, ieina=kaina,
+    sig = dict(scenarijus="Atsistatymas", tipas=1, ieina=kaina,
                tikslas=R, stop=stop, R=R, L=L, atr_abs=atr,
                progresas=(kaina - L) / (R - L) if R > L else 0.0,
                progresas_tikslus=True, kritimas_atr=kritimas / atr,
@@ -502,7 +502,7 @@ def scenarijus_2(langas, kd, iki_uzdarymo=None):
     if iki_uzdarymo is not None:
         viso = RINKOS["eu"]["uzdarymas"] - RINKOS["eu"]["atidarymas"]
         prog_l = max(0.0, 1.0 - float(iki_uzdarymo) / max(1.0, viso))
-    sig = dict(scenarijus="Naujienu tarpas ir eiga", tipas=2, ieina=kaina,
+    sig = dict(scenarijus="Ralis", tipas=2, ieina=kaina,
                tikslas=None, stop=stop, R=None, L=orb_min, atr_abs=atr,
                progresas=min(1.0, max(prog_j, prog_l)),
                progresas_tikslus=False, tarpas_atr=tarpas / atr,
@@ -800,18 +800,6 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 <footer>
   Pozicija 18&nbsp;000&nbsp;€, sąnaudos 10&nbsp;€ už ciklą (lūžio taškas 0,0556&nbsp;%).
   Horizontas 3 sesijos, pozicija nešama per naktį.<br>
-  <b>atsiėmė</b> — kiek ATR kaina yra virš vakarykščio uždarymo. SAP 07-23
-  krintantis peilis turėjo <b>0,03 ATR</b> (kaina vos palietė lygį ir apsivertė),
-  o trys tikri apsisukimai — 0,91–1,75 ATR. Žemiau 0,25 ATR ženkliukas gintaro
-  spalvos. Tai įspėjimas, ne filtras: viena peilio patirtis nėra pagrindas
-  blokuoti.<br>
-  <b>iki lygio</b> — kiek ATR nuo įėjimo iki buvusio lygio. Kalibracijoje
-  signalai, kur šis dydis &lt; 1 ATR, prarado pinigus <b>abiejose</b> rinkose
-  (−35 € EU, −37 € JAV) — vienintelis pjūvis, sutapęs abiejose. Todėl toks
-  ženkliukas gintaro spalvos. Tai įspėjimas, ne filtras.<br>
-  Ištisinė juosta — tikslas struktūrinis (žinomas kainos lygis). Punktyrinė —
-  <b>vertinimas</b>: ralio tikslo nėra, rodoma, kiek nueita ATR vienetais.
-  Juostos spalva rodo kliūtis, ne progresą.<br>
   Žurnalas: <a href="zurnalas.csv">zurnalas.csv</a> · duomenys:
   <a href="detektorius.json">detektorius.json</a>
 </footer>
@@ -823,8 +811,8 @@ const B = {visi:false, tinkami:true, EU:true, JAV:true};
 let duom = DUOM;
 
 const PAV = {
-  "Kritimas ir apsisukimas":"Kritimas ir apsisukimas",
-  "Naujienu tarpas ir eiga":"Naujienų tarpas ir eiga"
+  "Atsistatymas":"Atsistatymas",
+  "Ralis":"Ralis"
 };
 const silpnas = s => s.silpnas_atsiemimas === true;
 const nr = (x,n=2)=> (x===null||x===undefined||x==='')?'–':Number(x).toFixed(n);
