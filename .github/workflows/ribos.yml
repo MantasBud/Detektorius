@@ -1,0 +1,67 @@
+name: Ribu kalibracija
+
+# Tikrina PATIES SCENARIJAUS skaicius - tuos desimt ranka parinktu ribu,
+# kurios iki siol niekada nebuvo patikrintos nematytoje puseje.
+#
+# Nieko nekeicia ir nieko nekomituoja. Detektoriaus live kelio neliecia:
+# ribos.py tik IMPORTUOJA detektorius.py, savo scenariju kopijos neturi
+# (savitikra tikrina, kad su bazinemis ribomis gaunamas tas pats signalas).
+
+on:
+  workflow_dispatch:
+    inputs:
+      dienos:
+        description: "Kiek dienu 5 min istorijos (max 60)"
+        required: false
+        default: "60"
+      triuksmas:
+        description: "Pridėti triuksmo kontrole (atsitiktiniai duomenys)? taip/ne"
+        required: false
+        default: "taip"
+
+jobs:
+  ribos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      D: ${{ github.event.inputs.dienos || '60' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          test -f detektorius.py || (echo "KLAIDA - detektorius.py nerastas" && exit 1)
+          test -f ribos.py      || (echo "KLAIDA - ribos.py nerastas"      && exit 1)
+          test -f universas.py  || (echo "KLAIDA - universas.py nerastas"  && exit 1)
+
+      # Abi savitikros. ribos.py savitikra tikrina svarbiausia dalyka:
+      # kad laisvasis scenarijus su bazinemis ribomis duotu TA PATI signala,
+      # kaip tikrasis detektorius. Be sito matuotume ne ta, kuo prekiaujame.
+      - name: Savitikra - detektorius
+        run: python detektorius.py --savitikra
+
+      - name: Savitikra - ribos
+        run: python ribos.py --savitikra
+
+      # TRIUKSMO KONTROLE EINA PIRMA ir tycia: jei masina randa "TINKA" ant
+      # atsitiktiniu duomenu, tikru duomenu rezultato skaityti nebereikia.
+      - name: Triuksmo kontrole
+        if: ${{ github.event.inputs.triuksmas != 'ne' }}
+        run: python ribos.py --triuksmas --dienos 60 | tee triuksmas.txt
+
+      - name: Ribu kalibracija
+        run: python ribos.py --rinka abi --dienos "$D" | tee ribos.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ribos
+          path: |
+            ribos.txt
+            triuksmas.txt
