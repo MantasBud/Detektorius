@@ -1,0 +1,61 @@
+name: Alternatyviu iejimu patikra
+
+# Tikrina TRIS kitus iejimus (ne ribas): A - pirkti kritimo dienos uzdaryme,
+# B - pirkti anksciau be patvirtinimo, C - intraday sokas (Zawadowski 2006).
+# Kiekvienas lyginamas su kontrole: tuo paciu laiku, bet BE salygos.
+#
+# Nieko nekeicia ir nieko nekomituoja. detektorius.py nelieciamas.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dienos:
+        description: "Kiek dienu 5 min istorijos (max 60)"
+        required: false
+        default: "60"
+
+jobs:
+  iejimai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      D: ${{ github.event.inputs.dienos || '60' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          for f in detektorius.py ribos.py iejimai.py universas.py; do
+            test -f "$f" || (echo "KLAIDA - $f nerastas" && exit 1)
+          done
+
+      - name: Savitikra - detektorius
+        run: python detektorius.py --savitikra
+
+      - name: Savitikra - ribos
+        run: python ribos.py --savitikra
+
+      - name: Savitikra - iejimai
+        run: python iejimai.py --savitikra
+
+      # Triuksmo kontrole PIRMA: jei masina ant atsitiktinio klaidziojimo
+      # ras "TINKA", tikru duomenu rezultato skaityti nebereikia.
+      - name: Triuksmo kontrole
+        run: python iejimai.py --triuksmas --dienos 60 | tee iejimai_triuksmas.txt
+
+      - name: Alternatyviu iejimu patikra
+        run: python iejimai.py --rinka abi --dienos "$D" | tee iejimai.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iejimai
+          path: |
+            iejimai.txt
+            iejimai_triuksmas.txt
