@@ -1,0 +1,54 @@
+name: A iejimas - 2 metai (vienkartinis)
+
+# VIENKARTINIS, GALUTINIS testas. Paleisti VIENA karta.
+#
+# Pagrindine hipoteze ir sprendimo taisykle uzrasytos a_iejimas.py virsuje
+# PRIES paleidima: A2 (kritimas >= 1.6 ATR, pirkimas uzdaryme) su isejimu
+# sim05. Rezultatas - galutinis; ribos po jo nekeiciamos ir testas
+# nekartojamas su "siek tiek kitais" skaiciais.
+#
+# Nieko nekeicia ir nieko nekomituoja. detektorius.py nelieciamas.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  a_iejimas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          for f in detektorius.py ribos.py a_iejimas.py universas.py; do
+            test -f "$f" || (echo "KLAIDA - $f nerastas" && exit 1)
+          done
+
+      - name: Savitikra - detektorius
+        run: python detektorius.py --savitikra
+
+      - name: Savitikra - a_iejimas
+        run: python a_iejimas.py --savitikra
+
+      # Triuksmo kontrole pirma: jei ant atsitiktinio klaidziojimo
+      # atsiranda "TINKA", tikro rezultato skaityti nebereikia.
+      - name: Triuksmo kontrole
+        run: python a_iejimas.py --triuksmas | tee a_triuksmas.txt
+
+      - name: A iejimas - 2 metai
+        run: python a_iejimas.py | tee a_iejimas.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: a_iejimas
+          path: |
+            a_iejimas.txt
+            a_triuksmas.txt
