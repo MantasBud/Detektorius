@@ -456,41 +456,59 @@ def paleisti(rinkos, dienos, triuksmas=False):
 # ============================================================ triuksmo kontrole
 
 def triuksmo_duomenys(n_tickeriu=120, dienu=60, seed=11):
-    """Atsitiktinis klaidziojimas: pranasumo NERA pagal apibrezima.
+    """TIKRAS atsitiktinis klaidziojimas VISAIS lygiais.
 
-    Jei masina ir cia ras "TINKA", vadinasi ji per laisva, ir bet koks
-    radinys ant tikru duomenu nieko nereikstu. Butent sito reitinguotojas
-    niekada neturejo.
+    Pirmoji versija (iki 2026-09-28 vakaro) statydavo intraday kelia TARP
+    dienos Low ir High ir priverstinai baigdavo ties dienos uzdarymu. Tai
+    Brauno "tiltas", ne klaidziojimas: kiekvienas dienos vidurio kritimas
+    pagal konstrukcija turejo sugrizti, tad "triuksme" atsirasdavo
+    apsisukimas (intraday sokas ant jo duodavo +134 EUR su p = 0.000).
+
+    Dabar: paskutines `dienu` sesijos generuojamos kaip nepriklausomi 5 min
+    zingsniai (plius nakties tarpas), o TU dienu OHLC ISVEDAMI is 5 min baru.
+    Ankstesnes dienos (tik rodikliams) - dienos atsitiktinis klaidziojimas.
+    Taip nei dienos, nei intraday lygyje nera jokio drifto ar apsisukimo.
     """
     r = np.random.default_rng(seed)
     rod, barai = {}, {}
+    n_bar = 102
+    sig_bar = 0.020 / np.sqrt(n_bar + 1)      # dienos ~2% = barai + naktis
     idx_d = pd.bdate_range(end="2026-09-25", periods=400)
+    sen_idx, nauj_idx = idx_d[:-dienu], idx_d[-dienu:]
     for i in range(n_tickeriu):
         t = f"N{i:03d}"
-        ret = r.normal(0.0, 0.020, len(idx_d))
+        # --- senoji dalis: dienos klaidziojimas (tik ATR, virsunems ir pan.) ---
+        ret = r.normal(0.0, 0.020, len(sen_idx))
         c = 60 * np.exp(np.cumsum(ret))
-        o = c * (1 + r.normal(0, 0.004, len(idx_d)))
-        h = np.maximum(o, c) * (1 + abs(r.normal(0, 0.008, len(idx_d))))
-        l = np.minimum(o, c) * (1 - abs(r.normal(0, 0.008, len(idx_d))))
-        v = r.integers(2e6, 9e6, len(idx_d)).astype(float)
-        d = pd.DataFrame(dict(Open=o, High=h, Low=l, Close=c, Volume=v),
-                         index=idx_d)
-        rod[t] = D.dienos_rodikliai(d)
-        eil, ix = [], []
-        for ts, row in d.tail(dienu).iterrows():
+        o = c / np.exp(r.normal(0, sig_bar, len(c)))
+        h = np.maximum(o, c) * np.exp(abs(r.normal(0, 0.006, len(c))))
+        l = np.minimum(o, c) / np.exp(abs(r.normal(0, 0.006, len(c))))
+        dienos = [pd.DataFrame(dict(Open=o, High=h, Low=l, Close=c,
+                                    Volume=r.integers(2e6, 9e6, len(c)).astype(float)),
+                               index=sen_idx)]
+        # --- naujoji dalis: 5 min klaidziojimas, dienos OHLC IS JO ---
+        kaina = float(c[-1])
+        eil, ix, d_eil = [], [], []
+        for ts in nauj_idx:
             t0 = pd.Timestamp(ts.date(), tz="Europe/Berlin") + pd.Timedelta(hours=9)
-            w = np.cumsum(r.normal(0, 1, 102)); w -= w.min()
-            w = w / max(w.max(), 1e-9)
-            k = row["Low"] + (row["High"] - row["Low"]) * w
-            k = k + (row["Close"] - k[-1]) * np.linspace(0, 1, 102)
-            k[0] = row["Open"]
-            for j in range(102):
+            atid = kaina * np.exp(r.normal(0, sig_bar))          # nakties tarpas
+            zingsn = np.exp(np.cumsum(r.normal(0, sig_bar, n_bar)))
+            k = atid * zingsn
+            op = np.r_[atid, k[:-1]]
+            hi = np.maximum(op, k) * np.exp(abs(r.normal(0, sig_bar / 3, n_bar)))
+            lo = np.minimum(op, k) / np.exp(abs(r.normal(0, sig_bar / 3, n_bar)))
+            vol = r.lognormal(np.log(6e4), 0.5, n_bar)
+            for j in range(n_bar):
                 ix.append(t0 + pd.Timedelta(minutes=5 * j))
-                eil.append((k[j - 1] if j else row["Open"], k[j] * 1.0015,
-                            k[j] * 0.9985, k[j],
-                            row["Volume"] / 102 * r.uniform(0.4, 2.5)))
-        raw = pd.DataFrame(eil, columns=["Open", "High", "Low", "Close",
-                                         "Volume"], index=pd.DatetimeIndex(ix))
+                eil.append((op[j], hi[j], lo[j], k[j], vol[j]))
+            d_eil.append((atid, hi.max(), lo.min(), k[-1], vol.sum()))
+            kaina = float(k[-1])
+        dienos.append(pd.DataFrame(d_eil, columns=["Open", "High", "Low", "Close",
+                                                   "Volume"], index=nauj_idx))
+        dd = pd.concat(dienos)
+        rod[t] = D.dienos_rodikliai(dd)
+        raw = pd.DataFrame(eil, columns=["Open", "High", "Low", "Close", "Volume"],
+                           index=pd.DatetimeIndex(ix))
         barai[t] = D.sesijos_rodikliai(raw, "eu")
     return rod, barai
 
