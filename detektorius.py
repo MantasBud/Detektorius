@@ -101,6 +101,7 @@ import sys
 import tempfile
 import warnings
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -1247,8 +1248,9 @@ def zurnalo_santrauka(z):
     # I pataikymo dali jos iskaityti negalima nei i skaitikli, nei i vardikli.
     BAIGTYS = ("stop", "tikslas", "laikas")
     uzd = [r for r in sv.values() if str(r.get("baigtis") or "") in BAIGTYS]
+    NEMATUOJAMI = ("duomenu nera", "netvarkinga")
     be_duomenu = sum(1 for r in sv.values()
-                     if str(r.get("baigtis") or "") == "duomenu nera")
+                     if str(r.get("baigtis") or "") in NEMATUOJAMI)
     eur = []
     for r in uzd:
         try:
@@ -1422,7 +1424,13 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
         try:
             sig = _zurnalo_sig(r)
         except Exception as e:
-            print(f"  zurnalo eilute {raktas} netvarkinga ({e}) - praleidziu")
+            # Senojo formato eilute (pvz. be atr_abs) NIEKADA neissispres:
+            # baigtis() jos suskaiciuoti negali. Anksciau tokia eilute
+            # amzinai likdavo "atvira" ir gadino puslapio skaicius -
+            # 2026-09-28 ju buvo 14 is 20.
+            print(f"  zurnalo eilute {raktas} netvarkinga ({e}) - uzdarau")
+            r["baigtis"] = "netvarkinga"
+            r["paskut_laikas"] = dabar
             continue
         _zurnalo_eilute(r, toliau, sig, dabar)
     _zurnalo_irasyti(z)
@@ -1534,8 +1542,29 @@ def atkurti(s, sena, kd, kaina, rinka="eu"):
     return s
 
 
+def _amzius_min(pirmas_utc, pirmas_baras, dabar_baras):
+    """Signalo amzius minutemis.
+
+    Pirmenybe sieniniam laikrodziui (kiek laiko PRAEJO nuo aptikimo). Jei
+    busenoje senas irasas be laikas_utc, grizt prie baru laiko skirtumo.
+    """
+    try:
+        if pirmas_utc:
+            d = (datetime.now(timezone.utc) -
+                 datetime.fromisoformat(str(pirmas_utc)))
+            return max(0, int(d.total_seconds() // 60))
+    except Exception:
+        pass
+    try:
+        return max(0, int((pd.Timestamp(dabar_baras) -
+                           pd.Timestamp(pirmas_baras)).total_seconds() // 60))
+    except Exception:
+        return 0
+
+
 def paleisti_live(rinkos):
     busena = ikelti_busena()
+    dabar_utc = datetime.now(timezone.utc).isoformat(timespec="seconds")
     eilutes = []
     visi_barai = {}          # (zyme, tickeris) -> visi turimi 5 min barai
     for rinka in rinkos:
@@ -1543,9 +1572,20 @@ def paleisti_live(rinkos):
         rod, barai = parsisiusti(rinka, LIVE_DIENOS)
         fonas = rinkos_fonas(barai, rod)
         div = dividendu_kalendorius(list(barai))
+        # KURI DIENA yra TOJE rinkoje. Be sio patikrinimo pries JAV atidaryma
+        # paskutine turima sesija yra praeitas penktadienis, ir detektorius
+        # rodydavo penktadienio signalus kaip siandieninius - su "0 min"
+        # amziumi, nes barai nebejuda. Rasta 2026-09-28 gyvai.
+        siandien_rinkoje = datetime.now(ZoneInfo(RINKOS[rinka]["tz"])).date()
+        pasenusiu = 0
         for t, d in barai.items():
-            visi_barai[(zyme, t)] = d
+            visi_barai[(zyme, t)] = d          # zurnalui reikia VISU baru
             ses = d["sesija"].iloc[-1]
+            if ses != siandien_rinkoje:
+                # Rinka uzdaryta arba duomenys pasene. Zurnala vis tiek
+                # atnaujinam is siu baru - tik korteliu neberodom.
+                pasenusiu += 1
+                continue
             sesija = d[d["sesija"] == ses]
             if len(sesija) < S2_ORB_BARU + 4:
                 continue
@@ -1563,19 +1603,25 @@ def paleisti_live(rinkos):
                     busena[raktas] = dict(L=s["L"], R=s.get("R"), stop=s["stop"],
                                           R_pilnas=s.get("R_pilnas"),
                                           atsiemimas_atr=s.get("atsiemimas_atr"),
-                                          ieina=s["ieina"], laikas=dabar)
+                                          ieina=s["ieina"], laikas=dabar,
+                                          laikas_utc=dabar_utc)
                     s["pirmas_kartas"] = dabar
-                try:
-                    amz = int((pd.Timestamp(dabar) -
-                               pd.Timestamp(s["pirmas_kartas"])).total_seconds() // 60)
-                except Exception:
-                    amz = 0
+                # AMZIUS skaiciuojamas sieniniu laikrodziu, ne baru laiku.
+                # Baru laiku jis sustodavo, kai rinka uzsidarydavo: penktadieni
+                # aptiktas signalas pirmadieni vis dar rode "0 min", nes
+                # paskutinis baras nepajudejo.
+                amz = _amzius_min(sena.get("laikas_utc") if sena else dabar_utc,
+                                  sena.get("laikas") if sena else dabar, dabar)
                 s.update(_fono_laukai(fonas, d.index[-1], sesija, len(sesija) - 1))
                 s.update(rinka=zyme, tickeris=t, laikas=dabar,
                          sesija_data=str(ses),
                          atr_pct=float(kd["atr_pct"]), amzius_min=amz,
                          dividendas=div.get(t), _ses=ses)
                 eilutes.append(s)
+
+        if pasenusiu:
+            print(f"  {zyme}: {pasenusiu} akciju paskutine sesija ne siandienos "
+                  f"({siandien_rinkoje}) - rinka uzdaryta, korteliu nerodom")
 
     # Ataskaitu datos - TIK toms akcijoms, kurios turi signala. Bendram
     # universui tai butu 357 uzklausos kas 5 minutes, t.y. garantuotas
@@ -2729,6 +2775,77 @@ def savitikra():
     tikrinti("JSON: NaN pakeiciamas i None",
              _be_nan(dict(a=float("nan"), b=[1.0, float("inf")], c=2.0)),
              dict(a=None, b=[1.0, None], c=2.0))
+
+    # --- AMZIUS ir PASENUSIOS SESIJOS (2026-09-28, rasta gyvai) ----------
+    pries5 = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    tikrinti("amzius: 5 min nuo aptikimo -> 5 min",
+             _amzius_min(pries5, "x", "y"), 5)
+    # baru laikas nebejuda, kai rinka uzdaryta - amzius vis tiek turi augti
+    tikrinti("amzius: uzdarytoje rinkoje (barai nejuda) vis tiek auga",
+             _amzius_min((datetime.now(timezone.utc) -
+                          timedelta(minutes=4000)).isoformat(),
+                         "2026-09-25 15:55:00-04:00",
+                         "2026-09-25 15:55:00-04:00") > 3000, True)
+    tikrinti("amzius: sena busena be laikas_utc grizta prie baru laiko",
+             _amzius_min(None, "2026-09-28 10:00:00+02:00",
+                         "2026-09-28 10:35:00+02:00"), 35)
+    tikrinti("amzius: sugadintas laikas duoda 0, o ne isimti",
+             _amzius_min("blogai", "blogai", "blogai"), 0)
+    _pls = inspect.getsource(paleisti_live)
+    tikrinti("live: signalai rodomi TIK is siandienos sesijos",
+             "ses != siandien_rinkoje" in _pls, True)
+    tikrinti("live: bet zurnalui barai paduodami ir tada",
+             _pls.index("visi_barai[(zyme, t)] = d") <
+             _pls.index("ses != siandien_rinkoje"), True)
+    tikrinti("live: amzius imamas is laikas_utc, ne is baru",
+             "laikas_utc=dabar_utc" in _pls, True)
+
+    # netvarkinga eilute uzdaroma, o ne paliekama amzinai atvira
+    znet = {"EU|X|1|2026-09-25": dict(raktas="EU|X|1|2026-09-25",
+                                      sesija="2026-09-25", rinka="EU",
+                                      tinkamas="True", baigtis="",
+                                      ieina="10.0", tikslas="11.0",
+                                      stop="9.0", tipas="1", atr_pct="2.0")}
+    import io as _io3, contextlib as _cl3
+    with _cl3.redirect_stdout(_io3.StringIO()):
+        try:
+            _zurnalo_sig(znet["EU|X|1|2026-09-25"])
+            nera_isimties = True
+        except Exception:
+            nera_isimties = False
+    tikrinti("sena eilute be atr_abs vis dar kelia isimti",
+             nera_isimties, False)
+    # ir TIKRAI uzdaroma - per zurnalas_atnaujinti(), ne tik teoriskai
+    global ZURNALAS
+    _tikras_z = ZURNALAS
+    ZURNALAS = os.path.join(tempfile.gettempdir(), "savitikra_z", "z.csv")
+    try:
+        os.makedirs(os.path.dirname(ZURNALAS), exist_ok=True)
+        pd.DataFrame([dict(raktas="EU|X|1|2026-09-25", gimimas="2026-09-25",
+                           rinka="EU", tickeris="X", scenarijus="senas",
+                           tipas="1", sesija="2026-09-25", ieina="10.0",
+                           tikslas="11.0", stop="9.0", tinkamas="True",
+                           kliutys="", baigtis="")],
+                     columns=ZURNALO_STULPELIAI).to_csv(ZURNALAS, index=False)
+        barai_x = {"EU|X|1|2026-09-25": bb([[10.0, 10.2, 9.9, 10.1]])}
+        with _cl3.redirect_stdout(_io3.StringIO()):
+            zpo = zurnalas_atnaujinti([], barai_x)
+        tikrinti("netvarkinga eilute UZDAROMA, o ne paliekama atvira",
+                 zpo["EU|X|1|2026-09-25"]["baigtis"], "netvarkinga")
+    finally:
+        try:
+            os.remove(ZURNALAS)
+        except OSError:
+            pass
+        ZURNALAS = _tikras_z
+
+    st2 = zurnalo_santrauka({"a": dict(tinkamas=True, baigtis="netvarkinga",
+                                       eur=""),
+                             "b": dict(tinkamas=True, baigtis="tikslas",
+                                       eur=170.0)})
+    tikrinti("santrauka: 'netvarkinga' nei atvira, nei baigta",
+             (st2["atviru"], st2["baigtu"], round(st2["tikslo_dalis"])),
+             (0, 1, 100))
 
     ses_t = date(2026, 7, 24)
     tikrinti("iki ataskaitos: rytojaus ataskaita -> +1",
