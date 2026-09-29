@@ -1171,9 +1171,12 @@ function piesti(){
   // Paslepiami: krintancio peilio kandidatai ir tie, kuriuos blokuoja kliutys.
   // Zurnalas juos vis tiek raso, tad veliau matysime, ar slepti buvo teisinga.
   const slepti   = sig.filter(s => silpnas(s) || !s.tinkamas);
-  rodomi = sig.filter(s => !silpnas(s) && s.tinkamas);
-  const ankstyvi = rodomi.filter(s => !velyva(s));
-  const velyvi   = rodomi.filter(velyva);
+  const svarus   = sig.filter(s => !silpnas(s) && s.tinkamas);
+  const ankstyvi = svarus.filter(s => !velyva(s));
+  // Isskvepe (vėlyvi) rodomi TIK pasirinkus "Visi" - "Tik be kliūčių"
+  // rodo tik tai, i ka dar verta sokti.
+  const velyvi   = svarus.filter(velyva);
+  rodomi = B.visi ? sig : ankstyvi;
   let h = '';
   if (!sig.length){
     h = '<div class="tuscia">Šiuo metu nė vieno scenarijaus, atitinkančio pasirinkimą.' +
@@ -1181,14 +1184,17 @@ function piesti(){
   } else {
     if (ankstyvi.length) h += `<h2>Aktyvūs · ${ankstyvi.length}</h2>
       <div class="tinkl">${ankstyvi.map(kortele).join('')}</div>`;
-    if (velyvi.length) h += `<h2>Išsikvėpę · per vėlu šokti · ${velyvi.length}</h2>
+    if (velyvi.length && B.visi) h += `<h2>Išsikvėpę · per vėlu šokti · ${velyvi.length}</h2>
       <div class="tinkl">${velyvi.map(kortele).join('')}</div>`;
     if (slepti.length && B.visi) h += `<h2>Silpnas atsiėmimas ir blokuoti · ${slepti.length}</h2>
       <div class="tinkl">${slepti.map(kortele).join('')}</div>`;
-    if (slepti.length && !B.visi) h += `<div class="tuscia">Paslėpta ${slepti.length}: `
-      + `krintančio peilio kandidatai (atsiėmė &lt; 0,25 ATR) ir blokuoti. `
-      + `Spausk „Visi", jei nori juos matyti.</div>`;
-    if (!ankstyvi.length && !velyvi.length)
+    const kas = [];
+    if (velyvi.length) kas.push('išsikvėpę');
+    if (slepti.length) kas.push('krintančio peilio kandidatai (atsiėmė &lt; 0,25 ATR) ir blokuoti');
+    const paslepta = velyvi.length + slepti.length;
+    if (paslepta && !B.visi) h += `<div class="tuscia">Paslėpta ${paslepta}: `
+      + kas.join('; ') + `. Spausk „Visi", jei nori juos matyti.</div>`;
+    if (!ankstyvi.length && !(B.visi && velyvi.length))
       h = '<div class="tuscia">Nė vieno švaraus scenarijaus.</div>' + h;
   }
   el.innerHTML = h;
@@ -1200,7 +1206,7 @@ function piesti(){
 
 function zurnalas(z){
   const el = document.getElementById('zurnalas');
-  if (!z || !z.signalu){ el.hidden = true; return; }
+  if (!z){ el.hidden = true; return; }
   el.innerHTML = `
     <div><span>signalų</span><b>${z.signalu}</b></div>
     <div><span>atvirų</span><b>${z.atviru}</b></div>
@@ -3006,6 +3012,11 @@ def savitikra():
         "a": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-300.0, sesija="2026-09-29"),
         "b": dict(tinkamas=True, tipas="1", baigtis="tikslas", eur=170.0, sesija=PUSLAPIO_PRADZIA),
         "c": dict(tinkamas=True, tipas="1", baigtis="", eur="", sesija="2026-10-01")})
+    # juosta turi likti matoma ir tada, kai nuo PUSLAPIO_PRADZIA dar nieko nera
+    # (2026-09-29 ji dingdavo, nes JS slepe juosta prie 0 signalu)
+    tikrinti("puslapis: zurnalo juosta neslepiama prie 0 signalu",
+             ("if (!z){ el.hidden = true; return; }" in PUSLAPIO_SABLONAS
+              and "!z.signalu" not in PUSLAPIO_SABLONAS), True)
     tikrinti("santrauka: sesijos iki PUSLAPIO_PRADZIA neiskaitomos, nuo jos - taip",
              (st5["signalu"], st5["baigtu"], st5["atviru"], round(st5["vid_eur"])),
              (2, 1, 1, 170))
