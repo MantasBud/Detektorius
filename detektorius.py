@@ -1604,6 +1604,21 @@ def _amzius_min(pirmas_utc, pirmas_baras, dabar_baras):
         return 0
 
 
+def _uzbaigti_barai(sesija, dabar_ts=None):
+    """Be besiformuojancio paskutinio baro.
+
+    Ciklas sukasi 5 min zymuo + 60 s, tad JAV paskutinis baras paprastai turi
+    tik ~1 is 5 minuciu apyvartos. Tikrinant ji, apyvartos santykis (>= 1.2)
+    beveik visada nepraeidavo, ir kortele signala pamatydavo veliau nei
+    kalibracija ar baru perziura (auditas 2026-09-29: ORCL 10:15 vs 10:25).
+    """
+    if dabar_ts is None:
+        dabar_ts = pd.Timestamp.now(tz="UTC")
+    if len(sesija) and sesija.index[-1] + pd.Timedelta(minutes=BARAS_MIN) > dabar_ts:
+        return sesija.iloc[:-1]
+    return sesija
+
+
 def perziureti_dienos_barus(sesija, kd, rinka, zyme, t, ses, jau, dabar_ts=None):
     """Kiekvieno scenarijaus PIRMAS tinkamas signalas sios dienos baruose.
 
@@ -1672,10 +1687,15 @@ def paleisti_live(rinkos):
             except Exception as e:
                 kl = f"baru perziura: {type(e).__name__}: {e}"
                 _KLAIDOS[kl] = _KLAIDOS.get(kl, 0) + 1
-            iki = (RINKOS[rinka]["uzdarymas"] - int(sesija["minute"].iloc[-1]))
-            for s in aptikti(sesija, kd, iki, rinka):
+            # Signalas tikrinamas tik UZBAIGTAIS barais (kaip kalibracijoje);
+            # dabartine kaina korteles progresui - is paskutinio baro.
+            det = _uzbaigti_barai(sesija)
+            if len(det) < S2_ORB_BARU + 4:
+                continue
+            iki = (RINKOS[rinka]["uzdarymas"] - int(det["minute"].iloc[-1]))
+            for s in aptikti(det, kd, iki, rinka):
                 raktas = f"{zyme}|{t}|{s['tipas']}|{ses}"
-                dabar = str(d.index[-1])
+                dabar = str(det.index[-1])
                 sena = busena.get(raktas)
                 if sena:
                     atkurti(s, sena, kd, float(sesija["Close"].iloc[-1]), rinka)
@@ -2257,6 +2277,100 @@ def savitikra():
         print(f"         ieina {s2['ieina']:.2f}  stop {s2['stop']:.2f}  "
               f"tarpas {s2['tarpas_atr']:.1f} ATR  kliutys: "
               f"{s2['kliutys'] or 'nera'}")
+
+    # --- besiformuojantis baras (auditas 2026-09-29) ----------------------
+    _ix = pd.date_range("2026-07-24 15:30", periods=4, freq="5min", tz="UTC")
+    _sd = pd.DataFrame({"Close": [1.0, 2.0, 3.0, 4.0]}, index=_ix)
+    tikrinti("uzbaigti barai: besiformuojantis (15:45, dabar 15:46) atmetamas",
+             len(_uzbaigti_barai(_sd, pd.Timestamp("2026-07-24 15:46", tz="UTC"))), 3)
+    tikrinti("uzbaigti barai: uzbaigtas (15:45, dabar 15:50) paliekamas",
+             len(_uzbaigti_barai(_sd, pd.Timestamp("2026-07-24 15:50", tz="UTC"))), 4)
+
+    # --- KIEKVIENA salyga su riba iš ABIEJŲ pusių (auditas: isemus apyvartos
+    # ar VWAP salyga, savitikra buvo zalia) ----------------------------------
+    def _langas(f, sd, k):
+        for i in range(S2_ORB_BARU + 1, len(sd)):
+            if f(sd.iloc[:i + 1], k):
+                return sd.iloc[:i + 1].copy()
+        return None
+
+    def _pk(w, stulp, reiksme, eil=-1):
+        w2 = w.copy()
+        if isinstance(eil, slice):
+            w2.iloc[eil, w2.columns.get_loc(stulp)] = reiksme
+        else:
+            w2.iloc[eil, w2.columns.get_loc(stulp)] = reiksme
+        return w2
+    w1 = _langas(scenarijus_1, atsok, k_sap2)
+    tikrinti("1 scen. bazinis langas turi signala", w1 is not None, True)
+    if w1 is not None:
+        k1 = float(w1["Close"].iloc[-1])
+        tikrinti("1 scen. APYVARTA 1.19x -> nera, lygiai riba ir 1.21x -> yra",
+                 (scenarijus_1(_pk(w1, "apyv_santykis", 1.19), k_sap2) is None,
+                  scenarijus_1(_pk(w1, "apyv_santykis", S1_MIN_APYV_SANTYKIS), k_sap2) is not None,
+                  scenarijus_1(_pk(w1, "apyv_santykis", 1.21), k_sap2) is not None),
+                 (True, True, True))
+        tikrinti("1 scen. VWAP virs kainos -> nera, po kaina -> yra",
+                 (scenarijus_1(_pk(w1, "vwap", k1 * 1.001), k_sap2) is None,
+                  scenarijus_1(_pk(w1, "vwap", k1 * 0.999), k_sap2) is not None),
+                 (True, True))
+    w2 = _langas(scenarijus_2, tarpas, k_ady)
+    tikrinti("2 scen. bazinis langas turi signala", w2 is not None, True)
+    if w2 is not None:
+        k2 = float(w2["Close"].iloc[-1])
+        o6 = slice(0, S2_ORB_BARU)
+        tikrinti("2 scen. 30 min APYVARTA 1.9x -> nera, 2.1x -> yra",
+                 (scenarijus_2(_pk(w2, "apyv_santykis", 1.9, o6), k_ady) is None,
+                  scenarijus_2(_pk(w2, "apyv_santykis", 2.1, o6), k_ady) is not None),
+                 (True, True))
+        # MEDIANA, ne maksimumas: vienas didelis baras 30 min neatstoja
+        _w2m = _pk(w2, "apyv_santykis", 1.9, o6)
+        _w2m.iloc[0, _w2m.columns.get_loc("apyv_santykis")] = 9.0
+        tikrinti("2 scen. 30 min apyvarta - MEDIANA (vienas 9x baras nepakanka)",
+                 scenarijus_2(_w2m, k_ady) is None, True)
+        tikrinti("2 scen. VWAP virs kainos -> nera",
+                 scenarijus_2(_pk(w2, "vwap", k2 * 1.001), k_ady) is None, True)
+        tikrinti("2 scen. ORB auksciau kainos -> nera",
+                 scenarijus_2(_pk(w2, "High", k2 * 1.001, 0), k_ady) is None, True)
+        tikrinti("2 scen. tarpas uzpildytas (Low < vakar uzd.) -> nera, vos virs -> yra",
+                 (scenarijus_2(_pk(w2, "Low", 909.99, S2_ORB_BARU + 1), k_ady) is None,
+                  scenarijus_2(_pk(w2, "Low", 910.01, S2_ORB_BARU + 1), k_ady) is not None),
+                 (True, True))
+
+    # --- zurnalo horizontas (auditas: be situ testu mutacijos praeidavo) ---
+    _bi = []
+    for _d in ("2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23"):
+        for _m in (0, 5, 10):
+            _bi.append(pd.Timestamp(f"{_d} 09:{_m:02d}", tz="Europe/Berlin"))
+    _bd = pd.DataFrame({"Open": 1.0, "High": 1.0, "Low": 1.0, "Close": 1.0}, index=_bi)
+    _bd["sesija"] = [x.date() for x in _bd.index]
+    _hz = barai_signalams({"EU|H|1|2026-07-20": dict(gimimas=str(_bi[0]), baigtis="")},
+                          [], {("EU", "H"): _bd})
+    tikrinti("horizontas: gimes sesijos viduryje -> 3 sesijos (gimimo + 2)",
+             sorted({str(x) for x in _hz["EU|H|1|2026-07-20"]["sesija"]}),
+             ["2026-07-20", "2026-07-21", "2026-07-22"])
+    _hz2 = barai_signalams({"EU|H|1|2026-07-20": dict(gimimas=str(_bi[2]), baigtis="")},
+                           [], {("EU", "H"): _bd})
+    tikrinti("horizontas: gimes PASKUTINIAME bare -> 2 kitos sesijos",
+             sorted({str(x) for x in _hz2["EU|H|1|2026-07-20"]["sesija"]}),
+             ["2026-07-21", "2026-07-22"])
+
+    def _nuo(n):
+        """Data, nuo kurios iki siandien praejo lygiai n darbo dienu."""
+        x = pd.Timestamp(datetime.now().date())
+        while len(pd.bdate_range(x, datetime.now().date())) - 1 != n:
+            x -= pd.Timedelta(days=1)
+        return str(x.date())
+    _ramus = pd.DataFrame([[100, 100.2, 99.9, 100]],
+                          columns=["Open", "High", "Low", "Close"],
+                          index=pd.date_range("2026-07-24 10:00", periods=1, freq="5min"))
+    _sg = dict(tipas=1, ieina=100.0, tikslas=101.0, stop=99.0, atr_abs=2.0)
+    _r2 = dict(sesija=_nuo(HORIZONTAS_SESIJU - 1), sanaudos="10")
+    _zurnalo_eilute(_r2, _ramus, _sg, "dabar")
+    _r3 = dict(sesija=_nuo(HORIZONTAS_SESIJU), sanaudos="10")
+    _zurnalo_eilute(_r3, _ramus, _sg, "dabar")
+    tikrinti("uzdarymas pagal laika: dar ne (h-1), jau taip (h)",
+             (str(_r2.get("baigtis") or ""), _r3.get("baigtis")), ("", "laikas"))
 
     # --- scenarijai NEGALI suveikti kartu ---------------------------------
     tikrinti("tarpo dienos scenarijus 1 NEIMA (per toli nuo uzdarymo)",
