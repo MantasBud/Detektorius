@@ -1,0 +1,46 @@
+name: Zymu patikra 3 (Z12 kritimo tiesumas ER10)
+
+# Ar zyma padeda atskirti TIKRA scenariju nuo panasaus.
+# Tikras = 1 scenarijus pasiekia korteles tiksla anksciau nei stop'a;
+#          2 scenarijus baigiasi pelnu.
+# Nieko nefiltruoja ir nieko nekomituoja. detektorius.py nelieciamas.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  zymos3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          for f in detektorius.py zymos.py zymos2.py zymos3.py universas.py; do
+            test -f "$f" || (echo "KLAIDA - $f nerastas" && exit 1)
+          done
+
+      - name: Savitikra - detektorius
+        run: python detektorius.py --savitikra
+
+      - name: Savitikra - zymos
+        run: python zymos.py --savitikra
+
+      - name: Savitikra - zymos3
+        run: python zymos3.py --savitikra
+
+      - name: Zymu patikra 3
+        run: python zymos3.py | tee zymos3.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zymos3
+          path: zymos3.txt
