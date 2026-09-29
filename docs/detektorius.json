@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-09-29T17:37:14.869539+00:00",
+ "atnaujinta": "2026-09-29T17:42:18.821244+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -39,7 +39,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 3.955791891810016,
-   "amzius_min": 408,
+   "amzius_min": 413,
    "dividendas": {
     "kita_ex": "2027-04-26",
     "suma": 1.58,
@@ -82,7 +82,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 5.167194917440563,
-   "amzius_min": 200,
+   "amzius_min": 205,
    "dividendas": {
     "kita_ex": "2026-11-13",
     "suma": 0.1096375,
@@ -127,7 +127,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 2.9280467640076737,
-   "amzius_min": 398,
+   "amzius_min": 403,
    "dividendas": null,
    "iki_ataskaitos": 21
   },
@@ -166,7 +166,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 3.1138995217163488,
-   "amzius_min": 105,
+   "amzius_min": 110,
    "dividendas": {
     "kita_ex": "2027-05-24",
     "suma": 4.5,
