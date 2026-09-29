@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-09-29T19:22:15.097838+00:00",
+ "atnaujinta": "2026-09-29T19:27:13.173197+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -39,7 +39,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 3.955791891810016,
-   "amzius_min": 513,
+   "amzius_min": 518,
    "dividendas": {
     "kita_ex": "2027-04-26",
     "suma": 1.58,
@@ -82,7 +82,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 5.167194917440563,
-   "amzius_min": 305,
+   "amzius_min": 310,
    "dividendas": {
     "kita_ex": "2026-11-13",
     "suma": 0.1096375,
@@ -127,7 +127,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 2.9280467640076737,
-   "amzius_min": 503,
+   "amzius_min": 508,
    "dividendas": null,
    "iki_ataskaitos": 21
   },
@@ -166,13 +166,46 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 3.1138995217163488,
-   "amzius_min": 210,
+   "amzius_min": 215,
    "dividendas": {
     "kita_ex": "2027-05-24",
     "suma": 4.5,
     "dienu_iki": 239
    },
    "iki_ataskaitos": 149
+  },
+  {
+   "scenarijus": "Ralis",
+   "tipas": 2,
+   "ieina": 25.264999389648438,
+   "tikslas": null,
+   "stop": 24.548999404907228,
+   "R": null,
+   "L": 24.0,
+   "atr_abs": 0.715999984741211,
+   "progresas": 0.9102564102564102,
+   "progresas_tikslus": false,
+   "tarpas_atr": 3.142458167528081,
+   "virs_proverzio_atr": 0.06284926990635344,
+   "virsune_vertinimas": 25.920999908447264,
+   "sanaudos": 5.0,
+   "rizika_pct": 2.833960031816065,
+   "rizika_eur": 510.1128057268917,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-09-29 14:40:00-04:00",
+   "rinkos_pokytis": -0.2875234706211427,
+   "platumas": 36.61971830985916,
+   "plat_d30": 3.5211267605633836,
+   "santykinis": 3.629059159234227,
+   "rinka": "JAV",
+   "tickeris": "CCL",
+   "laikas": "2026-09-29 15:25:00-04:00",
+   "sesija_data": "2026-09-29",
+   "atr_pct": 3.2339656932238983,
+   "amzius_min": 46,
+   "dividendas": null,
+   "iki_ataskaitos": 0
   }
  ]
 }
