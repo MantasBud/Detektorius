@@ -227,8 +227,14 @@ ZURNALO_STULPELIAI = [
     "ieina", "tikslas", "stop", "rr", "rizika_eur", "atr_pct", "sanaudos",
     "tinkamas", "kliutys", "atr_abs",
     "paskut_laikas", "paskut_kaina", "mfe_pct", "mae_pct",
-    "baigtis", "pelnas_pct", "eur", "minuciu",
+    "baigtis", "pelnas_pct", "eur", "minuciu", "saltinis",
 ]
+# saltinis: "kortele" - signalas, kuri gyvas paleidimas parode kortelėje
+# (senos eilutes be reiksmes - irgi kortele); "baru perziura" - tas pats
+# scenarijus, bet nuo PIRMO baro, kuriame jis atsirado (kaip kalibracijoje).
+# Paleidimai vyksta kas ~12-20 min, todel kortele signala pamato veliau arba
+# visai nepamato (SOI 2026-09-28). Puslapio skaiciai - TIK is korteliu.
+PERZIUROS_ZYME = "B"
 DIVIDENDU_TALPYKLA = "dividendai.json"
 
 # --- scenarijus 1: kritimas ir apsisukimas ---
@@ -1253,7 +1259,9 @@ def zurnalo_santrauka(z):
     kalibracija matuoja tik tinkamus, tad du skaiciai apie ta pati dalyka
     niekada nesutapdavo (2026-09-28 nepriklausoma perziura).
     """
-    sv = {k: r for k, r in z.items() if _tinkama(r)}
+    # tik tai, ka rodė kortelės; "baru perziura" eilutes - tyrimui, ne puslapiui
+    sv = {k: r for k, r in z.items() if _tinkama(r)
+          and str(r.get("saltinis") or "") != "baru perziura"}
     # "duomenu nera" nera baigtis - tai eilute, kuriai pritruko duomenu.
     # I pataikymo dali jos iskaityti negalima nei i skaitikli, nei i vardikli.
     BAIGTYS = ("stop", "tikslas", "laikas", "slenkantis stop")
@@ -1353,7 +1361,7 @@ def zurnalas_ikelti():
                  f"Failas nepaliestas, kopija: {atsarga}")
 
 
-def barai_signalams(z, eilutes, visi_barai):
+def barai_signalams(z, eilutes, visi_barai, perziura=()):
     """Kiekvienam ATVIRAM zurnalo signalui - barai NUO jo gimimo iki dabar.
 
     Tai ta pati lentele, kuria kalibracijoje gauna baigtis(): bareliai po
@@ -1361,13 +1369,14 @@ def barai_signalams(z, eilutes, visi_barai):
     """
     gimimai = {f"{e['rinka']}|{e['tickeris']}|{e['tipas']}|{e['sesija_data']}":
                e.get("pirmas_kartas", e["laikas"]) for e in eilutes}
+    gimimai.update({e["_raktas"]: e["laikas"] for e in perziura})
     out = {}
     for raktas, r in list(z.items()) + [(k, dict(gimimas=v, baigtis=""))
                                         for k, v in gimimai.items()]:
         if raktas in out or str(r.get("baigtis") or ""):
             continue
         dalys = raktas.split("|")
-        if len(dalys) != 4:
+        if len(dalys) not in (4, 5):      # 5 - baru perziuros eilute
             continue
         d = visi_barai.get((dalys[0], dalys[1]))
         if d is None:
@@ -1395,7 +1404,7 @@ def barai_signalams(z, eilutes, visi_barai):
     return out
 
 
-def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
+def zurnalas_atnaujinti(eilutes, barai_pagal_rakta, perziura=()):
     """Pirmyneiginis testas: viena eilute vienam signalui, atnaujinama kas 5 min.
 
     Baigtis skaiciuojama TA PACIA baigtis() funkcija, kaip ir kalibracijoje.
@@ -1406,8 +1415,10 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
     z = zurnalas_ikelti()
     dabar = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-    for e in eilutes:
-        raktas = f"{e['rinka']}|{e['tickeris']}|{e['tipas']}|{e['sesija_data']}"
+    nauji = ([(f"{e['rinka']}|{e['tickeris']}|{e['tipas']}|{e['sesija_data']}",
+               e, "kortele") for e in eilutes]
+             + [(e["_raktas"], e, "baru perziura") for e in perziura])
+    for raktas, e, saltinis in nauji:
         if raktas not in z:
             z[raktas] = dict(
                 raktas=raktas, gimimas=e["laikas"], rinka=e["rinka"],
@@ -1422,7 +1433,8 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta):
                 tinkamas=bool(e["tinkamas"]),
                 kliutys="; ".join(e["kliutys"]),
                 paskut_laikas="", paskut_kaina="", mfe_pct="", mae_pct="",
-                baigtis="", pelnas_pct="", eur="", minuciu="")
+                baigtis="", pelnas_pct="", eur="", minuciu="",
+                saltinis=saltinis)
 
     # atviros eilutes: perskaiciuojam ta pacia baigtis() funkcija
     for raktas, r in z.items():
@@ -1581,10 +1593,42 @@ def _amzius_min(pirmas_utc, pirmas_baras, dabar_baras):
         return 0
 
 
+def perziureti_dienos_barus(sesija, kd, rinka, zyme, t, ses, jau, dabar_ts=None):
+    """Kiekvieno scenarijaus PIRMAS tinkamas signalas sios dienos baruose.
+
+    Tas pats ciklas kaip kalibracijoje: baras po baro, aptikti() su baru
+    istorija iki jo. Imami tik UZBAIGTI barai - paskutinis gyvas baras dar
+    formuojasi. Scenarijus, jau irasytas zurnale (raktas `jau`), nebeieskomas.
+    Korteliu tai nelieia: grazinami tik zurnalo irasai.
+    """
+    if dabar_ts is None:
+        dabar_ts = pd.Timestamp.now(tz="UTC")
+    reikia = {tp for tp in (1, 2)
+              if f"{zyme}|{t}|{tp}|{ses}|{PERZIUROS_ZYME}" not in jau}
+    out = []
+    for i in range(S2_ORB_BARU + 3, len(sesija)):
+        if not reikia:
+            break
+        if sesija.index[i] + pd.Timedelta(minutes=BARAS_MIN) > dabar_ts:
+            break
+        iki = RINKOS[rinka]["uzdarymas"] - int(sesija["minute"].iloc[i])
+        for sg in aptikti(sesija.iloc[:i + 1], kd, iki, rinka):
+            if sg["tipas"] not in reikia or not sg["tinkamas"]:
+                continue
+            reikia.discard(sg["tipas"])
+            sg.update(rinka=zyme, tickeris=t, laikas=str(sesija.index[i]),
+                      sesija_data=str(ses), atr_pct=float(kd["atr_pct"]),
+                      _raktas=f"{zyme}|{t}|{sg['tipas']}|{ses}|{PERZIUROS_ZYME}")
+            out.append(sg)
+    return out
+
+
 def paleisti_live(rinkos):
     busena = ikelti_busena()
     dabar_utc = datetime.now(timezone.utc).isoformat(timespec="seconds")
     eilutes = []
+    perziura = []            # zurnalui: pirmas scenarijaus baras (ne kortele)
+    jau_zurnale = set(zurnalas_ikelti())
     visi_barai = {}          # (zyme, tickeris) -> visi turimi 5 min barai
     for rinka in rinkos:
         zyme = RINKOS[rinka]["zyme"]
@@ -1611,6 +1655,12 @@ def paleisti_live(rinkos):
             kd = _kd(rod[t], ses)
             if kd is None:
                 continue
+            try:
+                perziura += perziureti_dienos_barus(sesija, kd, rinka, zyme, t,
+                                                    ses, jau_zurnale)
+            except Exception as e:
+                kl = f"baru perziura: {type(e).__name__}: {e}"
+                _KLAIDOS[kl] = _KLAIDOS.get(kl, 0) + 1
             iki = (RINKOS[rinka]["uzdarymas"] - int(sesija["minute"].iloc[-1]))
             for s in aptikti(sesija, kd, iki, rinka):
                 raktas = f"{zyme}|{t}|{s['tipas']}|{ses}"
@@ -1673,7 +1723,8 @@ def paleisti_live(rinkos):
             print(f"    {n:>6}x  {k}")
         _KLAIDOS.clear()
     z = zurnalas_atnaujinti(eilutes, barai_signalams(zurnalas_ikelti(), eilutes,
-                                                     visi_barai))
+                                                     visi_barai, perziura),
+                            perziura)
     with open("docs/index.html", "w", encoding="utf-8") as f:
         f.write(puslapis_html(eilutes, z))
     print(f"  puslapis: docs/index.html ({len(eilutes)} korteliu)")
@@ -2900,6 +2951,89 @@ def savitikra():
                     dict(tipas=1, ieina=100.0, tikslas=101.0, stop=98.5,
                          atr_abs=2.0), "dabar")
     tikrinti("zurnalas: 1 scen. stop -> 'stop'", r1.get("baigtis"), "stop")
+
+    # --- baru perziura: pirmas TINKAMAS baras, tik uzbaigti barai ---
+    ix = pd.date_range("2026-07-24 09:00", periods=30, freq="5min", tz="Europe/Berlin")
+    ses_p = pd.DataFrame({"Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0,
+                          "minute": [9 * 60 + 5 * k for k in range(30)]}, index=ix)
+    kd_p = pd.Series({"atr_pct": 2.0})
+
+    def _netikras(langas, kd, iki=None, rinka="eu"):
+        n = len(langas)
+        if n < 12:
+            return []
+        return [dict(tipas=1, tinkamas=n >= 15, scenarijus="Atsistatymas",
+                     ieina=float(n), stop=0.0, kliutys=[])]
+    _tikras_apt = globals()["aptikti"]
+    globals()["aptikti"] = _netikras
+    try:
+        pv = perziureti_dienos_barus(ses_p, kd_p, "eu", "EU", "X", ix[0].date(), set(),
+                                     dabar_ts=pd.Timestamp("2026-07-24 20:00", tz="UTC"))
+        tikrinti("baru perziura: pirmas TINKAMAS baras (15-as), ne pirmas netinkamas",
+                 [(e["tipas"], e["laikas"], e["ieina"]) for e in pv],
+                 [(1, str(ix[14]), 15.0)])
+        tikrinti("baru perziura: raktas su perziuros zyme",
+                 pv[0]["_raktas"], f"EU|X|1|{ix[0].date()}|{PERZIUROS_ZYME}")
+        tikrinti("baru perziura: jau zurnale -> neieskoma",
+                 perziureti_dienos_barus(ses_p, kd_p, "eu", "EU", "X", ix[0].date(),
+                                         {pv[0]["_raktas"]},
+                                         dabar_ts=pd.Timestamp("2026-07-24 20:00", tz="UTC")),
+                 [])
+        # 15-as baras (09:70=10:10) baigiasi 10:15 Berlyne = 08:15 UTC
+        tikrinti("baru perziura: besiformuojantis baras neimamas",
+                 perziureti_dienos_barus(ses_p, kd_p, "eu", "EU", "X", ix[0].date(), set(),
+                                         dabar_ts=pd.Timestamp("2026-07-24 08:14", tz="UTC")),
+                 [])
+        tikrinti("baru perziura: uzbaigtas baras imamas",
+                 len(perziureti_dienos_barus(ses_p, kd_p, "eu", "EU", "X", ix[0].date(), set(),
+                                             dabar_ts=pd.Timestamp("2026-07-24 08:15", tz="UTC"))),
+                 1)
+    finally:
+        globals()["aptikti"] = _tikras_apt
+
+    # santrauka: baru perziuros eilutes i puslapio skaicius NEPATENKA
+    st4 = zurnalo_santrauka({
+        "a": dict(tinkamas=True, tipas="1", baigtis="tikslas", eur=170.0, saltinis="kortele"),
+        "b": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-190.0, saltinis="baru perziura"),
+        "c": dict(tinkamas=True, tipas="1", baigtis="", eur="", saltinis="baru perziura"),
+        "d": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-190.0)})   # sena eilute
+    tikrinti("santrauka: baru perziura neiskaitoma, sena eilute - iskaitoma",
+             (st4["signalu"], st4["baigtu"], st4["atviru"], round(st4["tikslo_dalis"])),
+             (2, 2, 0, 50))
+
+    # barai_signalams: 5 daliu raktas gauna barus PO gimimo baro
+    d_x = ses_p.assign(sesija=ix[0].date())
+    e_p = dict(pv[0])
+    bs = barai_signalams({}, [], {("EU", "X"): d_x}, [e_p])
+    tikrinti("barai_signalams: perziuros eilute gauna barus po gimimo",
+             ((len(bs[e_p["_raktas"]]), str(bs[e_p["_raktas"]].index[0]))
+              if e_p["_raktas"] in bs else "eilute negavo baru"),
+             (15, str(ix[15])))
+
+    # zurnalas_atnaujinti: saltinis irasomas; kortele ir perziura - atskiros eilutes
+    _tz = ZURNALAS
+    ZURNALAS = os.path.join(tempfile.gettempdir(), "savitikra_z2", "z.csv")
+    try:
+        os.makedirs(os.path.dirname(ZURNALAS), exist_ok=True)
+        if os.path.exists(ZURNALAS):
+            os.remove(ZURNALAS)
+        bazinis = dict(rinka="EU", tickeris="X", tipas=1, sesija_data=str(ix[0].date()),
+                       laikas=str(ix[14]), scenarijus="Atsistatymas", ieina=100.0,
+                       tikslas=101.0, stop=99.0, rr=1.0, rizika_eur=180.0,
+                       sanaudos=10.0, atr_pct=2.0, atr_abs=2.0, tinkamas=True,
+                       kliutys=[])
+        e_z = dict(bazinis, _raktas=f"EU|X|1|{ix[0].date()}|{PERZIUROS_ZYME}")
+        with _cl3.redirect_stdout(_io3.StringIO()):
+            zs = zurnalas_atnaujinti([dict(bazinis)], {}, [e_z])
+        tikrinti("zurnalas: kortele ir baru perziura - dvi eilutes su saltiniu",
+                 sorted((k.count("|"), r["saltinis"]) for k, r in zs.items()),
+                 [(3, "kortele"), (4, "baru perziura")])
+    finally:
+        try:
+            os.remove(ZURNALAS)
+        except OSError:
+            pass
+        ZURNALAS = _tz
 
     ses_t = date(2026, 7, 24)
     tikrinti("iki ataskaitos: rytojaus ataskaita -> +1",
