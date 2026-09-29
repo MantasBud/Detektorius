@@ -1235,6 +1235,16 @@ def _tinkama(r):
     return bool(v)
 
 
+def _pasiteisino(r):
+    """1 scenarijus - tikslas; 2 scenarijus - pelnas po sanaudu (eur > 0)."""
+    if str(r.get("tipas") or "").strip() == "2":
+        try:
+            return float(r.get("eur")) > 0
+        except (TypeError, ValueError):
+            return False
+    return r.get("baigtis") == "tikslas"
+
+
 def zurnalo_santrauka(z):
     """Santrauka skaiciuojama TIK is tinkamu signalu.
 
@@ -1246,7 +1256,7 @@ def zurnalo_santrauka(z):
     sv = {k: r for k, r in z.items() if _tinkama(r)}
     # "duomenu nera" nera baigtis - tai eilute, kuriai pritruko duomenu.
     # I pataikymo dali jos iskaityti negalima nei i skaitikli, nei i vardikli.
-    BAIGTYS = ("stop", "tikslas", "laikas")
+    BAIGTYS = ("stop", "tikslas", "laikas", "slenkantis stop")
     uzd = [r for r in sv.values() if str(r.get("baigtis") or "") in BAIGTYS]
     NEMATUOJAMI = ("duomenu nera", "netvarkinga")
     be_duomenu = sum(1 for r in sv.values()
@@ -1259,8 +1269,12 @@ def zurnalo_santrauka(z):
             pass
     return dict(signalu=len(sv), atviru=len(sv) - len(uzd) - be_duomenu,
                 baigtu=len(uzd),
-                tikslo_dalis=(100.0 * sum(1 for r in uzd
-                                          if r.get("baigtis") == "tikslas") / len(uzd))
+                # "tikslas" puslapyje = scenarijus PASITEISINO, kaip kalibracijoje:
+                # 1 scenarijus - pasiektas tikslas; 2 scenarijus tikslo neturi,
+                # jam pasiteisinimas = pelnas po sanaudu. Anksciau kiekvienas
+                # 2 scenarijus (ir pelningas) cia buvo skaiciuojamas kaip
+                # nepataikymas. Puslapio isvaizda nesikeicia.
+                tikslo_dalis=(100.0 * sum(1 for r in uzd if _pasiteisino(r)) / len(uzd))
                 if uzd else 0.0,
                 vid_eur=(sum(eur) / len(eur)) if eur else None)
 
@@ -1475,7 +1489,12 @@ def _zurnalo_eilute(r, toliau, sig, dabar):
     # uzdarom TIK tada, kai tikrai issisprende. "laikas" gyvai reiskia tik
     # tai, kad kol kas neissisprende - horizontas dar nesibaige.
     if b["baigtis"] in ("stop", "tikslas"):
-        uzdaryti(b["baigtis"])
+        # 2 scenarijus neturi tikslo - jis baigiasi SLENKANCIU stop'u, kuris
+        # dazniausiai jau buna virs iejimo (pelnas). Zyma "stop" zurnale
+        # atrode kaip nuostolis, todel 2 scenarijaus stop'as vadinamas
+        # atskirai. Rezultatas (pelnas_pct, eur) nesikeicia.
+        uzdaryti("slenkantis stop" if (sig.get("tipas") == 2 and b["baigtis"] == "stop")
+                 else b["baigtis"])
         return
     try:
         nuo = datetime.fromisoformat(str(r["sesija"])).date()
@@ -2846,6 +2865,41 @@ def savitikra():
     tikrinti("santrauka: 'netvarkinga' nei atvira, nei baigta",
              (st2["atviru"], st2["baigtu"], round(st2["tikslo_dalis"])),
              (0, 1, 100))
+
+    # 2 scenarijus: pasiteisinimas = pelnas po sanaudu, ne "tikslas"
+    st3 = zurnalo_santrauka({
+        "a": dict(tinkamas=True, tipas="1", baigtis="tikslas", eur=170.0),
+        "b": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-190.0),
+        "c": dict(tinkamas=True, tipas="2", baigtis="slenkantis stop", eur=420.0),
+        "d": dict(tinkamas=True, tipas="2", baigtis="slenkantis stop", eur=-150.0),
+        "e": dict(tinkamas=True, tipas="2", baigtis="stop", eur=90.0),     # sena zyma
+        "f": dict(tinkamas=True, tipas="2", baigtis="laikas", eur=5.0)})
+    tikrinti("santrauka: 2 scen. pelningas = pasiteisino (ir su sena 'stop' zyma)",
+             (st3["baigtu"], round(st3["tikslo_dalis"])), (6, 67))
+    tikrinti("santrauka: 1 scen. stop'as - ne pasiteisinimas; 2 scen. su nuostoliu - ne",
+             (_pasiteisino(dict(tipas="1", baigtis="stop", eur=50.0)),
+              _pasiteisino(dict(tipas="2", baigtis="slenkantis stop", eur=-1.0)),
+              _pasiteisino(dict(tipas=2, baigtis="laikas", eur=1.0))),
+             (False, False, True))
+    tikrinti("santrauka: vid. rezultatas nesikeicia (visu baigtu vidurkis)",
+             round(st3["vid_eur"], 2), round((170 - 190 + 420 - 150 + 90 + 5) / 6, 2))
+
+    # zurnalo eilute: 2 scenarijaus stop'as vadinamas "slenkantis stop",
+    # 1 scenarijaus - "stop"
+    def _zb(bars):
+        i = pd.date_range("2026-07-24 10:00", periods=len(bars), freq="5min")
+        return pd.DataFrame(bars, columns=["Open", "High", "Low", "Close"], index=i)
+    kyla_krenta = _zb([[100, 104, 100, 104], [104, 106, 104, 106], [106, 106, 103, 103]])
+    r2 = dict(sesija="2026-07-24", sanaudos="10.0")
+    _zurnalo_eilute(r2, kyla_krenta, dict(tipas=2, ieina=100.0, tikslas=None,
+                                          stop=97.0, atr_abs=2.0), "dabar")
+    tikrinti("zurnalas: 2 scen. slenkantis stop -> 'slenkantis stop', pelnas +4%",
+             (r2.get("baigtis"), r2.get("pelnas_pct")), ("slenkantis stop", 4.0))
+    r1 = dict(sesija="2026-07-24", sanaudos="10.0")
+    _zurnalo_eilute(r1, _zb([[100, 100.5, 98, 98]]),
+                    dict(tipas=1, ieina=100.0, tikslas=101.0, stop=98.5,
+                         atr_abs=2.0), "dabar")
+    tikrinti("zurnalas: 1 scen. stop -> 'stop'", r1.get("baigtis"), "stop")
 
     ses_t = date(2026, 7, 24)
     tikrinti("iki ataskaitos: rytojaus ataskaita -> +1",
