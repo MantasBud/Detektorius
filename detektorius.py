@@ -235,6 +235,10 @@ ZURNALO_STULPELIAI = [
 # Paleidimai vyksta kas ~12-20 min, todel kortele signala pamato veliau arba
 # visai nepamato (SOI 2026-09-28). Puslapio skaiciai - TIK is korteliu.
 PERZIUROS_ZYME = "B"
+# Puslapio statistika skaiciuojama nuo sios sesijos. Iki 2026-09-29 korteles
+# vėluodavo 15-20 min (GitHub planuoklis), todel ju rezultatai neatspindi
+# dabartinio detektoriaus (ciklas kas 5 min). Senos eilutes zurnale lieka.
+PUSLAPIO_PRADZIA = "2026-09-30"
 DIVIDENDU_TALPYKLA = "dividendai.json"
 
 # --- scenarijus 1: kritimas ir apsisukimas ---
@@ -1261,7 +1265,8 @@ def zurnalo_santrauka(z):
     """
     # tik tai, ka rodė kortelės; "baru perziura" eilutes - tyrimui, ne puslapiui
     sv = {k: r for k, r in z.items() if _tinkama(r)
-          and str(r.get("saltinis") or "") != "baru perziura"}
+          and str(r.get("saltinis") or "") != "baru perziura"
+          and not (str(r.get("sesija") or "") and str(r["sesija"]) < PUSLAPIO_PRADZIA)}
     # "duomenu nera" nera baigtis - tai eilute, kuriai pritruko duomenu.
     # I pataikymo dali jos iskaityti negalima nei i skaitikli, nei i vardikli.
     BAIGTYS = ("stop", "tikslas", "laikas", "slenkantis stop")
@@ -2997,6 +3002,13 @@ def savitikra():
         "b": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-190.0, saltinis="baru perziura"),
         "c": dict(tinkamas=True, tipas="1", baigtis="", eur="", saltinis="baru perziura"),
         "d": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-190.0)})   # sena eilute
+    st5 = zurnalo_santrauka({
+        "a": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-300.0, sesija="2026-09-29"),
+        "b": dict(tinkamas=True, tipas="1", baigtis="tikslas", eur=170.0, sesija=PUSLAPIO_PRADZIA),
+        "c": dict(tinkamas=True, tipas="1", baigtis="", eur="", sesija="2026-10-01")})
+    tikrinti("santrauka: sesijos iki PUSLAPIO_PRADZIA neiskaitomos, nuo jos - taip",
+             (st5["signalu"], st5["baigtu"], st5["atviru"], round(st5["vid_eur"])),
+             (2, 1, 1, 170))
     tikrinti("santrauka: baru perziura neiskaitoma, sena eilute - iskaitoma",
              (st4["signalu"], st4["baigtu"], st4["atviru"], round(st4["tikslo_dalis"])),
              (2, 2, 0, 50))
