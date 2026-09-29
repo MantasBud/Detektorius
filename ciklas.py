@@ -94,19 +94,39 @@ def irasyti(zinute="Detektorius", bandymu=3):
         k, out = sh("git push -q")
         if k == 0:
             return True, "irasyta"
-        sh("git pull --rebase -q")
+        k2, out2 = sh("git pull --rebase -q")
+        if k2 != 0:
+            # Konfliktas: kas nors pakeite ta pati faila, kuri raso ciklas.
+            # Niekada nepaliekam repo pusiau sujungto - nutraukiam; kitas
+            # ratas prasides tiksliai nuo nutolusio repo ir viska perskaiciuos.
+            sh("git rebase --abort")
+            return False, "konfliktas su nutolusiu repo - sio rato rezultatas atmestas"
     return False, out
+
+
+def sinchronizuoti():
+    """Darbo aplankas = TIKSLIAI nutolusio repo busena.
+
+    Nesekmingo rato likuciai (pusiau irasyti failai, neissiustas commit,
+    nutrauktas sujungimas) niekada neblokuoja kito rato: nutolusis repo
+    visada laimi, o ciklo isvestys perskaiciuojamos is nauju duomenu.
+    Jei nutolusio repo pasiekti nepavyksta - tesiama su turimu.
+    """
+    sh("git rebase --abort")
+    sh("git merge --abort")
+    k, out = sh("git fetch -q")
+    if k == 0:
+        k, out = sh("git reset -q --hard @{u}")
+    if k != 0:
+        sh("git reset -q --hard HEAD")
+    return k == 0, out
 
 
 def ratas(cmd_savitikra, cmd_live, zurnalas=print):
     """Vienas ratas. Grazina True, jei viskas pavyko."""
-    # Nesekmingo rato likuciai (pusiau irasyti docs failai) neturi blokuoti
-    # pull'o. Sekmingi ratai visada commit'ina, tad cia trinama tik tai, kas
-    # niekur neturejo patekti.
-    sh("git reset -q --hard HEAD")
-    k, out = sh("git pull --rebase -q")
-    if k != 0:
-        zurnalas(f"  git pull nepavyko (tesiama su turimu): {out.strip()[-300:]}")
+    ok_s, out = sinchronizuoti()
+    if not ok_s:
+        zurnalas(f"  nutolusio repo pasiekti nepavyko (tesiama su turimu): {out.strip()[-300:]}")
     kodas = hashlib.sha1(open("detektorius.py", "rb").read()).hexdigest()[:8] \
         if _yra("detektorius.py") else "nera"
     k, out = sh(cmd_savitikra, timeout=120)
@@ -228,6 +248,20 @@ def savitikra():
         ok_i, _ = irasyti()
         tikrinti("irasyti: konfliktas su nauju ikelimu issprendziamas rebase",
                  ok_i, True)
+        # KONFLIKTAS: kitas pakeicia ta pati faila, kuri raso ciklas
+        os.chdir(f"{tmp}/b")
+        sh("git pull -q && echo RANKA > docs/x && git commit -qam ranka && git push -q")
+        os.chdir(f"{tmp}/a")
+        sh("echo CIKLAS >> docs/x")
+        ok_k, info_k = irasyti()
+        k_r, _ = sh("git status | grep -qi rebase")
+        tikrinti("konfliktas: rato rezultatas atmestas, repo NElieka pusiau sujungtas",
+                 (ok_k, k_r != 0), (False, True))
+        r = ratas("true", "echo PO >> docs/x; cat detektorius.py > docs/kodas", zin.append)
+        k, out = sh(f"git --git-dir={tmp}/nut.git show HEAD:docs/x")
+        tikrinti("po konflikto kitas ratas prasideda nuo nutolusio repo ir issiuncia",
+                 (r, out.strip()), (True, "RANKA\nPO"))
+
         # savitikra nepraeina -> live nepaleidziamas
         zin = []
         r = ratas("false", "echo SUGADINTA > docs/x", zin.append)
