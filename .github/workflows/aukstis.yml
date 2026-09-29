@@ -1,0 +1,47 @@
+name: Iejimo aukstis + atvejai 09-28/29
+
+# 1) atvejai.py v6: ar detektorius atpazino AIXA, KER, BESI, ASM, SOI ir kodel ne.
+# 2) aukstis.py: ar iejimas toli virs dienos dugno blogina 1 scenariju.
+# Nieko nefiltruoja ir nieko nekomituoja. detektorius.py nelieciamas.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  aukstis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          for f in detektorius.py zymos.py aukstis.py atvejai.py universas.py; do
+            test -f "$f" || (echo "KLAIDA - $f nerastas" && exit 1)
+          done
+
+      - name: Savitikra - detektorius
+        run: python detektorius.py --savitikra
+
+      - name: Savitikra - aukstis
+        run: python aukstis.py --savitikra
+
+      - name: Atvejai 09-28/29
+        run: python atvejai.py | tee atvejai.txt
+
+      - name: Iejimo aukstis
+        run: python aukstis.py | tee aukstis.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aukstis
+          path: |
+            atvejai.txt
+            aukstis.txt
