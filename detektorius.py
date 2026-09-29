@@ -214,6 +214,10 @@ MIN_RR = 1.0                                        # aritmetika
 
 BARAS_MIN = 5
 HORIZONTAS_SESIJU = 3
+# Kiek darbo dienu PO horizonto laukiama, kol eilute uzdaroma "is bedos"
+# (Yahoo sutrikimas, trukstamos sesijos, isbrauktas tickeris). Iki tol eilute
+# lieka atvira ir kiekvienas paleidimas bando ja ismatuoti is naujo.
+HORIZONTO_ATSARGA_D = 5
 # Live rezimui reikia tiek pat 5 min istorijos, kiek kalibracijai: apyv_tipine
 # yra tos pacios minutes mediana per 20 ANKSTESNIU dienu (min_periods=5).
 # Su 5 dienomis po shift(1) lieka 4 stebejimai -> apyv_santykis visada NaN ->
@@ -1519,24 +1523,74 @@ def _zurnalo_eilute(r, toliau, sig, dabar):
         uzdaryti("slenkantis stop" if (sig.get("tipas") == 2 and b["baigtis"] == "stop")
                  else b["baigtis"])
         return
-    try:
-        nuo = datetime.fromisoformat(str(r["sesija"])).date()
-        praejo = len(pd.bdate_range(nuo, datetime.now().date())) - 1
-    except Exception:
-        praejo = HORIZONTAS_SESIJU      # nezinoma data -> uzdarom, o ne
-                                        # laikom amzinai atvira
-    if praejo >= HORIZONTAS_SESIJU:
+    # "laikas" - TIK kai baruose yra VISOS horizonto sesijos ir paskutine jau
+    # pasibaigusi. Anksciau buvo skaiciuojamos darbo dienos, tad per svente
+    # (JAV Padekos diena, EU Kaledos) eilute uzsidarydavo viena sesija per
+    # anksti - kitaip nei kalibracijoje.
+    if _horizontas_baigtas(r, toliau, dabar):
+        uzdaryti("laikas")
+        return
+    # Saugiklis: jei sesiju taip ir netrūksta (duomenu skyle, isbrauktas
+    # tickeris), eilute neturi likti atvira amzinai.
+    if _praejo_darbo_dienu(r, dabar) >= HORIZONTAS_SESIJU + HORIZONTO_ATSARGA_D:
         uzdaryti("laikas")
 
 
-def _uzdaryti_pagal_laika(r, dabar):
-    """Uzdaro eilute, kuriai nebegauname baru, kai horizontas jau praejo."""
+def _dabar_ts(dabar):
+    """Paleidimo laikas is `dabar` (ISO eilute); jei neiskaitoma - dabar."""
+    try:
+        t = pd.Timestamp(str(dabar))
+        return t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
+    except Exception:
+        return pd.Timestamp.now(tz="UTC")
+
+
+def _praejo_darbo_dienu(r, dabar=None):
+    """Darbo dienos nuo signalo sesijos. Nezinoma data -> labai daug (uzdaryti)."""
     try:
         nuo = datetime.fromisoformat(str(r["sesija"])).date()
-        praejo = len(pd.bdate_range(nuo, datetime.now().date())) - 1
+        return len(pd.bdate_range(nuo, _dabar_ts(dabar).date())) - 1
     except Exception:
-        praejo = HORIZONTAS_SESIJU
-    if praejo >= HORIZONTAS_SESIJU:
+        return 10 ** 6
+
+
+def _horizontas_baigtas(r, toliau, dabar=None):
+    """Ar `toliau` turi VISAS horizonto sesijas, ir paskutine jau pasibaigusi.
+
+    Tiek pat sesiju, kiek duoda kalibracija ir barai_signalams(): gimimo sesija
+    (jei po gimimo joje dar buvo baru) + likusios iki HORIZONTAS_SESIJU.
+    Sesijos skaiciuojamos pagal TIKRUS barus, tad svente ar pusdienis ju
+    neišsaugo is skaiciaus.
+    """
+    if toliau is None or not len(toliau) or "sesija" not in toliau:
+        return False
+    rinka = ZYME_I_RINKA.get(str(r.get("rinka") or "EU"), "eu")
+    tz = RINKOS[rinka]["tz"]
+    try:
+        g = pd.Timestamp(str(r.get("gimimas") or r["sesija"]))
+        gim_ses = (g.tz_convert(tz) if g.tzinfo is not None else g).date()
+    except Exception:
+        return False
+    sesijos = sorted(set(toliau["sesija"]))
+    reikia = HORIZONTAS_SESIJU - (0 if gim_ses in sesijos else 1)
+    if len(sesijos) < reikia:
+        return False
+    pask = sesijos[reikia - 1]
+    dabar_v = _dabar_ts(dabar).tz_convert(tz)
+    if pask < dabar_v.date():
+        return True
+    return (pask == dabar_v.date() and
+            dabar_v.hour * 60 + dabar_v.minute >= RINKOS[rinka]["uzdarymas"])
+
+
+def _uzdaryti_pagal_laika(r, dabar):
+    """Uzdaro eilute, kuriai baru NEGAUNAME, tik praejus horizontui IR atsargai.
+
+    Anksciau uztekdavo vieno Yahoo sutrikimo horizonto dieną - eilute buvo
+    pazymima "duomenu nera" visam laikui, nors kitas paleidimas jau butu
+    gaves barus ir ismataves baigti.
+    """
+    if _praejo_darbo_dienu(r, dabar) >= HORIZONTAS_SESIJU + HORIZONTO_ATSARGA_D:
         r["baigtis"] = "duomenu nera"
         r["paskut_laikas"] = dabar
 
@@ -2355,22 +2409,41 @@ def savitikra():
              sorted({str(x) for x in _hz2["EU|H|1|2026-07-20"]["sesija"]}),
              ["2026-07-21", "2026-07-22"])
 
-    def _nuo(n):
-        """Data, nuo kurios iki siandien praejo lygiai n darbo dienu."""
-        x = pd.Timestamp(datetime.now().date())
-        while len(pd.bdate_range(x, datetime.now().date())) - 1 != n:
-            x -= pd.Timedelta(days=1)
-        return str(x.date())
-    _ramus = pd.DataFrame([[100, 100.2, 99.9, 100]],
-                          columns=["Open", "High", "Low", "Close"],
-                          index=pd.date_range("2026-07-24 10:00", periods=1, freq="5min"))
+    # --- uzdarymas "laikas" pagal PAMATYTAS sesijas, ne darbo dienas -------
+    def _sb(dienos, tz="America/New_York", h=10):
+        ix = [pd.Timestamp(f"{d} {h}:{m:02d}", tz=tz) for d in dienos for m in (0, 5)]
+        x = pd.DataFrame({"Open": 100.0, "High": 100.2, "Low": 99.9, "Close": 100.0}, index=ix)
+        x["sesija"] = [i.date() for i in x.index]
+        return x
     _sg = dict(tipas=1, ieina=100.0, tikslas=101.0, stop=99.0, atr_abs=2.0)
-    _r2 = dict(sesija=_nuo(HORIZONTAS_SESIJU - 1), sanaudos="10")
-    _zurnalo_eilute(_r2, _ramus, _sg, "dabar")
-    _r3 = dict(sesija=_nuo(HORIZONTAS_SESIJU), sanaudos="10")
-    _zurnalo_eilute(_r3, _ramus, _sg, "dabar")
-    tikrinti("uzdarymas pagal laika: dar ne (h-1), jau taip (h)",
-             (str(_r2.get("baigtis") or ""), _r3.get("baigtis")), ("", "laikas"))
+    # JAV: gimes antradieni 11-24 10:00, ketvirtadieni 11-26 - Padekos diena
+    _jr = lambda: dict(rinka="JAV", sesija="2026-11-24", sanaudos="5",
+                       gimimas="2026-11-24 10:00:00-05:00")
+    _t1 = _sb(["2026-11-24", "2026-11-25"])
+    _r = _jr(); _zurnalo_eilute(_r, _t1, _sg, "2026-11-27T07:00:00+00:00")
+    tikrinti("svente: penktadieni ryta (2 is 3 sesiju) eilute LIEKA atvira",
+             str(_r.get("baigtis") or ""), "")
+    _t2 = _sb(["2026-11-24", "2026-11-25", "2026-11-27"])
+    _r = _jr(); _zurnalo_eilute(_r, _t2, _sg, "2026-11-27T18:00:00+00:00")
+    tikrinti("        penktadieni 13:00 NY (sesija dar vyksta) - atvira",
+             str(_r.get("baigtis") or ""), "")
+    _r = _jr(); _zurnalo_eilute(_r, _t2, _sg, "2026-11-27T21:00:00+00:00")
+    tikrinti("        lygiai 16:00 NY uzdaryme (3 sesijos) - 'laikas'",
+             _r.get("baigtis"), "laikas")
+    # gimes PASKUTINIAME bare: reikia 2 kitu sesiju
+    _rp = dict(_jr(), gimimas="2026-11-24 15:55:00-05:00")
+    _r = dict(_rp); _zurnalo_eilute(_r, _sb(["2026-11-25"]), _sg, "2026-12-01T12:00:00+00:00")
+    tikrinti("gimes paskutiniame bare: 1 is 2 sesiju - atvira",
+             str(_r.get("baigtis") or ""), "")
+    _r = dict(_rp); _zurnalo_eilute(_r, _sb(["2026-11-25", "2026-11-27"]), _sg,
+                                    "2026-12-01T12:00:00+00:00")
+    tikrinti("gimes paskutiniame bare: 2 is 2 sesiju - 'laikas'", _r.get("baigtis"), "laikas")
+    # saugiklis: sesiju taip ir netrūksta -> uzdaroma tik po atsargos
+    _r = _jr(); _zurnalo_eilute(_r, _t1, _sg, "2026-12-01T12:00:00+00:00")   # praejo 5 d.d.
+    tikrinti("saugiklis: praejus horizontui be atsargos - dar atvira",
+             str(_r.get("baigtis") or ""), "")
+    _r = _jr(); _zurnalo_eilute(_r, _t1, _sg, "2026-12-04T12:00:00+00:00")   # praejo 8 d.d.
+    tikrinti("saugiklis: praejus horizontui + atsargai - 'laikas'", _r.get("baigtis"), "laikas")
 
     # --- scenarijai NEGALI suveikti kartu ---------------------------------
     tikrinti("tarpo dienos scenarijus 1 NEIMA (per toli nuo uzdarymo)",
@@ -2919,16 +2992,19 @@ def savitikra():
     _zurnalo_eilute(zr3, zlaik, zsig, "dabar")
     tikrinti("zurnalas: ta pacia diena eilute LIEKA atvira",
              str(zr3.get("baigtis") or ""), "")
-    sena = šian - timedelta(days=10)
+    sena = šian - timedelta(days=20)
     zr4 = dict(zr3, sesija=str(sena), baigtis="")
     _zurnalo_eilute(zr4, zlaik, zsig, "dabar")
-    tikrinti("zurnalas: praejus horizontui uzdaroma kaip 'laikas'",
+    tikrinti("zurnalas: seniai praejus horizontui (be sesiju info) - 'laikas'",
              zr4.get("baigtis"), "laikas")
 
-    # eilute be baru neturi likti atvira amzinai
-    zr5 = dict(raktas="JAV|Y|1|x", sesija=str(sena), rinka="JAV", baigtis="")
-    _uzdaryti_pagal_laika(zr5, "dabar")
-    tikrinti("zurnalas: eilute be baru uzdaroma kaip 'duomenu nera'",
+    # eilute be baru: vienas Yahoo sutrikimas jos NEUZDARO (auditas 2026-09-29)
+    zr5 = dict(raktas="JAV|Y|1|x", sesija="2026-11-24", rinka="JAV", baigtis="")
+    _uzdaryti_pagal_laika(zr5, "2026-11-30T12:00:00+00:00")     # 4 d.d. - horizontas praejo
+    tikrinti("zurnalas: be baru horizonto pabaigoje - LIEKA atvira (gal kita karta bus)",
+             str(zr5.get("baigtis") or ""), "")
+    _uzdaryti_pagal_laika(zr5, "2026-12-04T12:00:00+00:00")     # 8 d.d. = 3 + atsarga 5
+    tikrinti("zurnalas: be baru ir po atsargos - 'duomenu nera'",
              zr5.get("baigtis"), "duomenu nera")
 
     # santrauka: blokuoti signalai i skaicius NEPATENKA
