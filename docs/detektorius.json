@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-09-29T16:13:40.568077+00:00",
+ "atnaujinta": "2026-09-29T16:17:10.277377+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -39,7 +39,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 3.955791891810016,
-   "amzius_min": 324,
+   "amzius_min": 328,
    "dividendas": {
     "kita_ex": "2027-04-26",
     "suma": 1.58,
@@ -82,7 +82,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 5.167194917440563,
-   "amzius_min": 117,
+   "amzius_min": 120,
    "dividendas": {
     "kita_ex": "2026-11-13",
     "suma": 0.1096375,
@@ -127,7 +127,7 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 2.9280467640076737,
-   "amzius_min": 314,
+   "amzius_min": 318,
    "dividendas": null,
    "iki_ataskaitos": 21
   },
@@ -166,52 +166,13 @@
    "laikas": "2026-09-29 17:25:00+02:00",
    "sesija_data": "2026-09-29",
    "atr_pct": 3.1138995217163488,
-   "amzius_min": 22,
+   "amzius_min": 25,
    "dividendas": {
     "kita_ex": "2027-05-24",
     "suma": 4.5,
     "dienu_iki": 239
    },
    "iki_ataskaitos": 149
-  },
-  {
-   "scenarijus": "Atsistatymas",
-   "tipas": 1,
-   "ieina": 74.44999694824219,
-   "tikslas": 75.11524658203125,
-   "stop": 73.78474731445313,
-   "R": 75.11524658203125,
-   "L": 72.72000122070312,
-   "atr_abs": 1.330499267578125,
-   "progresas": 0.6153852309892068,
-   "progresas_tikslus": true,
-   "kritimas_atr": 2.1044754551835183,
-   "atsiemimas_atr": 1.2551665451008995,
-   "baru_nuo_dugno": 32,
-   "nesekmes": 0,
-   "silpnas_atsiemimas": false,
-   "R_pilnas": 75.58000183105469,
-   "tikslas_ribotas": true,
-   "kelias_atr": 0.8267561665955621,
-   "sanaudos": 5.0,
-   "rizika_pct": 0.8935522646851722,
-   "rizika_eur": 160.83940764333101,
-   "rr": 1.0,
-   "kliutys": [],
-   "tinkamas": true,
-   "pirmas_kartas": "2026-09-29 10:15:00-04:00",
-   "rinkos_pokytis": -0.4326412349480391,
-   "platumas": 21.27659574468085,
-   "plat_d30": -1.258615522924785,
-   "santykinis": 2.852886156134038,
-   "rinka": "JAV",
-   "tickeris": "AIG",
-   "laikas": "2026-09-29 12:10:00-04:00",
-   "sesija_data": "2026-09-29",
-   "atr_pct": 1.828111143025467,
-   "amzius_min": 117,
-   "dividendas": null,
-   "iki_ataskaitos": 36
   }
  ]
 }
