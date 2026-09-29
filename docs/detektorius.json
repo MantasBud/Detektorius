@@ -1,4 +1,42 @@
 {
- "atnaujinta": "2026-09-29T08:37:25.085933+00:00",
- "signalai": []
+ "atnaujinta": "2026-09-29T08:52:08.598816+00:00",
+ "signalai": [
+  {
+   "scenarijus": "Ralis",
+   "tipas": 2,
+   "ieina": 144.60000610351562,
+   "tikslas": null,
+   "stop": 141.60000610351562,
+   "R": null,
+   "L": 141.60000610351562,
+   "atr_abs": 4.102499389648438,
+   "progresas": 0.18627450980392157,
+   "progresas_tikslus": false,
+   "tarpas_atr": 1.7794000923896103,
+   "virs_proverzio_atr": 0.07312689735305997,
+   "virsune_vertinimas": 148.70250549316407,
+   "sanaudos": 10.0,
+   "rizika_pct": 2.07468870910861,
+   "rizika_eur": 373.44396763954984,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-09-29 10:35:00+02:00",
+   "rinkos_pokytis": -0.13499657177746816,
+   "platumas": 47.61904761904761,
+   "plat_d30": -4.157602127145282,
+   "santykinis": 1.8585367140411257,
+   "rinka": "EU",
+   "tickeris": "LR.PA",
+   "laikas": "2026-09-29 10:35:00+02:00",
+   "sesija_data": "2026-09-29",
+   "atr_pct": 3.0422685976737847,
+   "amzius_min": 0,
+   "dividendas": {
+    "kita_ex": "2027-05-28",
+    "suma": 2.38,
+    "dienu_iki": 243
+   },
+   "iki_ataskaitos": 37
+  }
+ ]
 }
