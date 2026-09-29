@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ATVEJU PATIKRA v5 — ATPAZINIMAS  —  2026-09-28
-==============================================
+ATVEJU PATIKRA v6 — ATPAZINIMAS IR IEJIMO AUKSTIS  —  2026-09-29
+================================================================
+
+v6: Manto atvejai 09-28/29 (AIXA, KER, BESI, ASM, SOI). Suveikus signalui
+papildomai spausdinama, kur ieita dienos dugno atzvilgiu (ATR vienetais), ar
+stop'as virs dienos dugno, ir kas vyko po iejimo iki horizonto pabaigos.
+Tik diagnostika - detektorius nekeiciamas.
+
 
 Vienas klausimas: ar detektorius ATPAZISTA Manto nurodytus atvejus, o jei ne -
 KODEL. Ne pelningumas.
@@ -48,13 +54,11 @@ import detektorius as D
 
 # (etikete, [(tickeris, rinka)], nuo, iki)
 ATVEJAI = [
-    ("ADYEN",       [("ADYEN.AS", "eu")],                "2026-08-10", "2026-08-14"),
-    ("AMD Xetra",   [("AMD.DE", "eu"), ("AMD.F", "eu")], "2026-08-12", "2026-08-21"),
-    ("AMD JAV",     [("AMD", "us")],                     "2026-08-12", "2026-08-21"),
-    ("CAP",         [("CAP.PA", "eu")],                  "2026-07-22", "2026-07-28"),
-    ("PTX Xetra",   [("PTX.DE", "eu"), ("PTX.F", "eu")], "2026-08-03", "2026-08-05"),
-    ("PTX JAV",     [("PLTR", "us")],                    "2026-08-03", "2026-08-05"),
-    ("SAP",         [("SAP.DE", "eu")],                  "2026-07-22", "2026-07-28"),
+    ("AIXA",  [("AIXA.DE", "eu")], "2026-09-24", "2026-09-29"),
+    ("KER",   [("KER.PA", "eu")],  "2026-09-24", "2026-09-29"),
+    ("BESI",  [("BESI.AS", "eu")], "2026-09-24", "2026-09-29"),
+    ("ASM",   [("ASM.AS", "eu")],  "2026-09-24", "2026-09-29"),
+    ("SOI",   [("SOI.PA", "eu")],  "2026-09-23", "2026-09-29"),
 ]
 
 # Xetros laiku JAV atidarymas 15:30 (Berlyno laikas; vasara ir ziema sutampa
@@ -191,6 +195,7 @@ def sekti(sd, kd, ses, rinka):
             print(f"    SUVEIKE {nr} ({s['scenarijus']}) {laikas}: ieina {s['ieina']:.2f}"
                   + (f"  BLOKUOTA: {', '.join(s['kliutys'])}" if s["kliutys"]
                      else "  TINKAMAS"))
+            aukscio_eilute(langas, sd.iloc[i + 1:], kd, s)
     for nr in (1, 2):
         if nr in suveike:
             continue
@@ -208,6 +213,22 @@ def sekti(sd, kd, ses, rinka):
                 if not ok:
                     print(f"        NE  {nm:<24} {d}")
     return suveike
+
+
+def aukscio_eilute(langas, po, kd, s):
+    """Kur ieita dienos dugno atzvilgiu ir kas vyko po to (tik sios sesijos likutis)."""
+    atr = float(kd["atr_abs"])
+    dugnas = float(langas["Low"].min())
+    ieina, stop, tikslas = float(s["ieina"]), float(s["stop"]), float(s["tikslas"])
+    print(f"      dienos dugnas iki signalo {dugnas:.2f}; ieina {(ieina-dugnas)/atr:.2f} ATR virs jo; "
+          f"vakar uzd. {float(kd['uzdarymas']):.2f} ({(ieina-float(kd['uzdarymas']))/atr:+.2f} ATR)")
+    print(f"      stop {stop:.2f} yra {'VIRS' if stop > dugnas else 'ZEMIAU'} dienos dugno"
+          f" ({(stop-dugnas)/atr:+.2f} ATR); tikslas {tikslas:.2f}")
+    if len(po):
+        print(f"      iki sesijos pabaigos: zemiausia {float(po['Low'].min()):.2f}"
+              f" ({(float(po['Low'].min())-ieina)/atr:+.2f} ATR), auksciausia "
+              f"{float(po['High'].max()):.2f} ({(float(po['High'].max())-ieina)/atr:+.2f} ATR),"
+              f" uzdarymas {float(po['Close'].iloc[-1]):.2f}")
 
 
 def atvejis(etikete, kandidatai, nuo_s, iki_s):
@@ -264,7 +285,7 @@ def atvejis(etikete, kandidatai, nuo_s, iki_s):
 
 if __name__ == "__main__":
     D._KURSAS.clear()
-    print("ATVEJU PATIKRA v5 - atpazinimas ir priezastys")
+    print("ATVEJU PATIKRA v6 - atpazinimas, priezastys ir iejimo aukstis")
     visi = {}
     for a in ATVEJAI:
         try:
