@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-09-30T13:42:15.118969+00:00",
+ "atnaujinta": "2026-09-30T13:47:17.374846+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -14,7 +14,7 @@
    "progresas_tikslus": true,
    "kritimas_atr": 1.6627604009628754,
    "atsiemimas_atr": 0.4215461486542926,
-   "baru_nuo_dugno": 15,
+   "baru_nuo_dugno": 16,
    "nesekmes": 0,
    "silpnas_atsiemimas": false,
    "R_pilnas": 20.149999618530273,
@@ -29,16 +29,16 @@
    ],
    "tinkamas": false,
    "pirmas_kartas": "2026-09-30 13:10:00+02:00",
-   "rinkos_pokytis": -0.38008360957869636,
-   "platumas": 48.18652849740933,
-   "plat_d30": -1.813471502590673,
-   "santykinis": 2.255076779880094,
+   "rinkos_pokytis": -0.3833708897086785,
+   "platumas": 44.61538461538462,
+   "plat_d30": -6.7073667073667025,
+   "santykinis": 2.2583640600100763,
    "rinka": "EU",
    "tickeris": "DBAN.DE",
-   "laikas": "2026-09-30 14:00:00+02:00",
+   "laikas": "2026-09-30 15:25:00+02:00",
    "sesija_data": "2026-09-30",
    "atr_pct": 2.1965032138921696,
-   "amzius_min": 130,
+   "amzius_min": 135,
    "dividendas": {
     "kita_ex": "2027-06-02",
     "suma": 1.0,
