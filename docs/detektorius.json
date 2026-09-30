@@ -1,4 +1,48 @@
 {
- "atnaujinta": "2026-09-30T12:07:11.615514+00:00",
- "signalai": []
+ "atnaujinta": "2026-09-30T12:12:18.744208+00:00",
+ "signalai": [
+  {
+   "scenarijus": "Atsistatymas",
+   "tipas": 1,
+   "ieina": 147.5,
+   "tikslas": 149.54000091552734,
+   "stop": 145.45999908447266,
+   "R": 149.54000091552734,
+   "L": 143.60000610351562,
+   "atr_abs": 4.0800018310546875,
+   "progresas": 0.6141731526626024,
+   "progresas_tikslus": true,
+   "kritimas_atr": 1.3112716773814732,
+   "atsiemimas_atr": 0.7107824987751835,
+   "baru_nuo_dugno": 33,
+   "nesekmes": 2,
+   "silpnas_atsiemimas": false,
+   "R_pilnas": 149.9499969482422,
+   "tikslas_ribotas": true,
+   "kelias_atr": 0.6004891786062898,
+   "sanaudos": 10.0,
+   "rizika_pct": 1.3830514681541313,
+   "rizika_eur": 248.94926426774364,
+   "rr": 1.0,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-09-30 13:50:00+02:00",
+   "rinkos_pokytis": -0.41120422264749323,
+   "platumas": 47.77777777777778,
+   "plat_d30": 2.616487455197138,
+   "santykinis": 2.1704336848380743,
+   "rinka": "EU",
+   "tickeris": "EL.PA",
+   "laikas": "2026-09-30 13:50:00+02:00",
+   "sesija_data": "2026-09-30",
+   "atr_pct": 2.821577910677205,
+   "amzius_min": 0,
+   "dividendas": {
+    "kita_ex": "2027-05-03",
+    "suma": 4.0,
+    "dienu_iki": 218
+   },
+   "iki_ataskaitos": 134
+  }
+ ]
 }
