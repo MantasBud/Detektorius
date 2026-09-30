@@ -1,4 +1,50 @@
 {
- "atnaujinta": "2026-09-30T11:57:15.325921+00:00",
- "signalai": []
+ "atnaujinta": "2026-09-30T12:02:14.176386+00:00",
+ "signalai": [
+  {
+   "scenarijus": "Atsistatymas",
+   "tipas": 1,
+   "ieina": 6.014999866485596,
+   "tikslas": 6.08587486743927,
+   "stop": 5.944124865531921,
+   "R": 6.08587486743927,
+   "L": 5.960000038146973,
+   "atr_abs": 0.14175000190734863,
+   "progresas": 0.25,
+   "progresas_tikslus": true,
+   "kritimas_atr": 1.4814817306615204,
+   "atsiemimas_atr": 0.1763675134464713,
+   "baru_nuo_dugno": 32,
+   "nesekmes": 1,
+   "silpnas_atsiemimas": true,
+   "R_pilnas": 6.199999809265137,
+   "tikslas_ribotas": true,
+   "kelias_atr": 1.26984004173965,
+   "sanaudos": 10.0,
+   "rizika_pct": 1.1783042814111462,
+   "rizika_eur": 212.0947706540063,
+   "rr": 1.0,
+   "kliutys": [
+    "apyvarta 1.7 mln < 1.8"
+   ],
+   "tinkamas": false,
+   "pirmas_kartas": "2026-09-30 12:05:00+02:00",
+   "rinkos_pokytis": -0.3404906603669655,
+   "platumas": 48.421052631578945,
+   "plat_d30": -0.5585392051557463,
+   "santykinis": 1.1780148227130027,
+   "rinka": "EU",
+   "tickeris": "PROX.BR",
+   "laikas": "2026-09-30 13:40:00+02:00",
+   "sesija_data": "2026-09-30",
+   "atr_pct": 2.3664441957213613,
+   "amzius_min": 95,
+   "dividendas": {
+    "kita_ex": "2027-01-27",
+    "suma": 0.3,
+    "dienu_iki": 122
+   },
+   "iki_ataskaitos": 30
+  }
+ ]
 }
