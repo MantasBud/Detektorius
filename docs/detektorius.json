@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-01T11:11:54.246532+00:00",
+ "atnaujinta": "2026-10-01T11:16:53.964910+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -38,13 +38,56 @@
    "laikas": "2026-10-01 12:35:00+02:00",
    "sesija_data": "2026-10-01",
    "atr_pct": 2.888889276183518,
-   "amzius_min": 5,
+   "amzius_min": 10,
    "dividendas": {
     "kita_ex": "2027-05-17",
     "suma": 0.07,
     "dienu_iki": 232
    },
    "iki_ataskaitos": null
+  },
+  {
+   "scenarijus": "Atsistatymas",
+   "tipas": 1,
+   "ieina": 25.100000381469727,
+   "tikslas": 25.373750400543212,
+   "stop": 24.82625036239624,
+   "R": 25.373750400543212,
+   "L": 24.65999984741211,
+   "atr_abs": 0.5480001449584961,
+   "progresas": 0.365080085921499,
+   "progresas_tikslus": true,
+   "kritimas_atr": 1.2773733171046315,
+   "atsiemimas_atr": 0.3105024008204908,
+   "baru_nuo_dugno": 50,
+   "nesekmes": 0,
+   "silpnas_atsiemimas": false,
+   "R_pilnas": 25.920000076293945,
+   "tikslas_ribotas": true,
+   "kelias_atr": 0.8211690582190171,
+   "sanaudos": 10.0,
+   "rizika_pct": 1.09063750961368,
+   "rizika_eur": 196.31475173046238,
+   "rr": 1.0,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-10-01 09:45:00+02:00",
+   "rinkos_pokytis": -0.6300941033235696,
+   "platumas": 50.0,
+   "plat_d30": 23.096446700507617,
+   "santykinis": 1.5947311071915438,
+   "rinka": "EU",
+   "tickeris": "UPM.HE",
+   "laikas": "2026-10-01 13:10:00+02:00",
+   "sesija_data": "2026-10-01",
+   "atr_pct": 2.2025730041930243,
+   "amzius_min": 205,
+   "dividendas": {
+    "kita_ex": "2026-11-12",
+    "suma": 0.75,
+    "dienu_iki": 46
+   },
+   "iki_ataskaitos": 27
   }
  ]
 }
