@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-01T11:46:54.189346+00:00",
+ "atnaujinta": "2026-10-01T11:51:54.610221+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -38,56 +38,13 @@
    "laikas": "2026-10-01 12:35:00+02:00",
    "sesija_data": "2026-10-01",
    "atr_pct": 2.888889276183518,
-   "amzius_min": 40,
+   "amzius_min": 45,
    "dividendas": {
     "kita_ex": "2027-05-17",
     "suma": 0.07,
     "dienu_iki": 232
    },
    "iki_ataskaitos": null
-  },
-  {
-   "scenarijus": "Atsistatymas",
-   "tipas": 1,
-   "ieina": 14.760000228881836,
-   "tikslas": 14.854750204086304,
-   "stop": 14.665250253677367,
-   "R": 14.854750204086304,
-   "L": 14.5600004196167,
-   "atr_abs": 0.18949995040893555,
-   "progresas": 0.3518510996395464,
-   "progresas_tikslus": true,
-   "kritimas_atr": 1.9525115359394398,
-   "atsiemimas_atr": 0.15831501053571348,
-   "baru_nuo_dugno": 45,
-   "nesekmes": 0,
-   "silpnas_atsiemimas": true,
-   "R_pilnas": 15.100000381469727,
-   "tikslas_ribotas": true,
-   "kelias_atr": 1.8469681955822976,
-   "sanaudos": 10.0,
-   "rizika_pct": 0.6419374914308277,
-   "rizika_eur": 115.54874845754898,
-   "rr": 1.0,
-   "kliutys": [],
-   "tinkamas": true,
-   "pirmas_kartas": "2026-10-01 13:05:00+02:00",
-   "rinkos_pokytis": -0.09346867331702091,
-   "platumas": 25.0,
-   "plat_d30": -2.9187817258883264,
-   "santykinis": 0.8448324308145794,
-   "rinka": "EU",
-   "tickeris": "RED.MC",
-   "laikas": "2026-10-01 13:25:00+02:00",
-   "sesija_data": "2026-10-01",
-   "atr_pct": 1.286489859457018,
-   "amzius_min": 25,
-   "dividendas": {
-    "kita_ex": "2026-12-28",
-    "suma": 0.6,
-    "dienu_iki": 92
-   },
-   "iki_ataskaitos": 27
   }
  ]
 }
