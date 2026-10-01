@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-01T11:06:54.280962+00:00",
+ "atnaujinta": "2026-10-01T11:11:54.246532+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -29,16 +29,16 @@
    ],
    "tinkamas": false,
    "pirmas_kartas": "2026-10-01 12:35:00+02:00",
-   "rinkos_pokytis": -0.11347008653346258,
-   "platumas": 23.076923076923077,
-   "plat_d30": 5.035685963521015,
-   "santykinis": 0.3473851983671006,
+   "rinkos_pokytis": -0.12012491513038182,
+   "platumas": 22.95918367346939,
+   "plat_d30": 4.917946560067328,
+   "santykinis": 0.3540400269640198,
    "rinka": "EU",
    "tickeris": "RCS.MI",
    "laikas": "2026-10-01 12:35:00+02:00",
    "sesija_data": "2026-10-01",
    "atr_pct": 2.888889276183518,
-   "amzius_min": 0,
+   "amzius_min": 5,
    "dividendas": {
     "kita_ex": "2027-05-17",
     "suma": 0.07,
