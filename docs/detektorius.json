@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-01T16:12:00.202897+00:00",
+ "atnaujinta": "2026-10-01T16:13:41.773079+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -36,7 +36,7 @@
    "laikas": "2026-10-01 17:25:00+02:00",
    "sesija_data": "2026-10-01",
    "atr_pct": 3.384414204812643,
-   "amzius_min": 60,
+   "amzius_min": 62,
    "dividendas": null,
    "iki_ataskaitos": 20
   },
@@ -49,7 +49,7 @@
    "R": 967.8992431640625,
    "L": 946.719970703125,
    "atr_abs": 20.4284912109375,
-   "progresas": 0.42644801399500676,
+   "progresas": 0.44020938445527025,
    "progresas_tikslus": true,
    "kritimas_atr": 1.1214746083362912,
    "atsiemimas_atr": 0.11087527830860076,
@@ -66,16 +66,16 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-10-01 11:40:00-04:00",
-   "rinkos_pokytis": -0.01114200787568076,
-   "platumas": 45.714285714285715,
-   "plat_d30": 1.3480885311871234,
-   "santykinis": 0.8957984044147549,
+   "rinkos_pokytis": -0.08674712852420052,
+   "platumas": 45.39007092198582,
+   "plat_d30": 1.0238737388872252,
+   "santykinis": 1.0171071062694437,
    "rinka": "JAV",
    "tickeris": "PH",
    "laikas": "2026-10-01 12:05:00-04:00",
    "sesija_data": "2026-10-01",
    "atr_pct": 2.1381687191337,
-   "amzius_min": 25,
+   "amzius_min": 27,
    "dividendas": null,
    "iki_ataskaitos": 35
   }
