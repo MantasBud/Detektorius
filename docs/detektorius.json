@@ -1,44 +1,4 @@
 {
- "atnaujinta": "2026-10-01T08:21:53.605549+00:00",
- "signalai": [
-  {
-   "scenarijus": "Atsistatymas",
-   "tipas": 1,
-   "ieina": 2.4019999504089355,
-   "tikslas": 2.4587249577045442,
-   "stop": 2.345274943113327,
-   "R": 2.4587249577045442,
-   "L": 2.2990000247955322,
-   "atr_abs": 0.11345001459121704,
-   "progresas": 0.25685765519800036,
-   "progresas_tikslus": true,
-   "kritimas_atr": 3.534596485800962,
-   "atsiemimas_atr": 0.9078881654139274,
-   "baru_nuo_dugno": 11,
-   "nesekmes": 0,
-   "silpnas_atsiemimas": false,
-   "R_pilnas": 2.700000047683716,
-   "tikslas_ribotas": true,
-   "kelias_atr": 2.6267083203870345,
-   "sanaudos": 10.0,
-   "rizika_pct": 2.3615740410798667,
-   "rizika_eur": 425.083327394376,
-   "rr": 1.0,
-   "kliutys": [],
-   "tinkamas": true,
-   "pirmas_kartas": "2026-10-01 10:00:00+02:00",
-   "rinkos_pokytis": -0.46544623649528716,
-   "platumas": 17.5,
-   "plat_d30": 1.1633663366336613,
-   "santykinis": 2.9398424318068885,
-   "rinka": "EU",
-   "tickeris": "HFG.DE",
-   "laikas": "2026-10-01 10:00:00+02:00",
-   "sesija_data": "2026-10-01",
-   "atr_pct": 4.934754822427938,
-   "amzius_min": 0,
-   "dividendas": null,
-   "iki_ataskaitos": 35
-  }
- ]
+ "atnaujinta": "2026-10-01T08:26:56.072452+00:00",
+ "signalai": []
 }
