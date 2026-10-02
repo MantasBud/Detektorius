@@ -1,4 +1,48 @@
 {
- "atnaujinta": "2026-10-02T12:06:59.459263+00:00",
- "signalai": []
+ "atnaujinta": "2026-10-02T12:12:00.523809+00:00",
+ "signalai": [
+  {
+   "scenarijus": "Atsistatymas",
+   "tipas": 1,
+   "ieina": 25.6200008392334,
+   "tikslas": 25.877000856399537,
+   "stop": 25.36300082206726,
+   "R": 25.877000856399537,
+   "L": 25.1200008392334,
+   "atr_abs": 0.5140000343322754,
+   "progresas": 0.8684227697774922,
+   "progresas_tikslus": true,
+   "kritimas_atr": 1.4785958575284883,
+   "atsiemimas_atr": 0.9727625809393915,
+   "baru_nuo_dugno": 57,
+   "nesekmes": 0,
+   "silpnas_atsiemimas": false,
+   "R_pilnas": 25.8799991607666,
+   "tikslas_ribotas": false,
+   "kelias_atr": 0.1945495475520722,
+   "sanaudos": 10.0,
+   "rizika_pct": 1.0031225946432418,
+   "rizika_eur": 180.5620670357835,
+   "rr": 1.0,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-10-02 10:20:00+02:00",
+   "rinkos_pokytis": 0.34887743950948735,
+   "platumas": 62.10526315789474,
+   "plat_d30": -6.64473684210526,
+   "santykinis": 1.8715880186100264,
+   "rinka": "EU",
+   "tickeris": "AENA.MC",
+   "laikas": "2026-10-02 13:50:00+02:00",
+   "sesija_data": "2026-10-02",
+   "atr_pct": 2.0461784122613964,
+   "amzius_min": 210,
+   "dividendas": {
+    "kita_ex": "2027-04-17",
+    "suma": 1.09,
+    "dienu_iki": 202
+   },
+   "iki_ataskaitos": 26
+  }
+ ]
 }
