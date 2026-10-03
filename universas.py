@@ -104,21 +104,9 @@ UNIVERSAS = {
         "FB2A.DE", "NFC.DE", "IBM.DE", "INL.DE", "QCI.DE", "AVG.DE",
         "MUB.DE", "AMD.DE",
     ],
-    # Zaliavos — fiziniais metalais padengti ETC ir naftos instrumentai, visi
-    # Xetra, EUR. Jie juda pagal palukanu normas ir geopolitika, t. y. pagal
-    # kitus veiksnius nei akcijos, todel yra vienintele nekoreliuojanti dalis
-    # sarase. DEMESIO: musu patvirtinti signalai matuoja grizima prie vidurkio
-    # AKCIJOSE; zaliavose trendai stipresni, o grizimas silpnesnis, ir to
-    # netikrinom. Zurnale jos matuojamos atskirai — jei neveiks, isimsim.
-    "Zaliavos": [
-        # Visi tikeriai patikrinti (2026-09). Xetra, EUR.
-        "4GLD.DE",    # Xetra-Gold, fizinis auksas, fondas ~21.8 mlrd EUR
-        "XAD6.DE",    # Xtrackers fizinis sidabras (alternatyva)
-        "8PSB.DE",    # Invesco fizinis sidabras (alternatyva)    # WisdomTree fizine platina, ~452 mln EUR    # WisdomTree fizinis paladis    # WisdomTree varis, EUR apsidraudes, ~127 mln EUR
-        # MEDIENOS: Europoje eurais kotiruojamo medienos ETC nera. Artimiausia
-        # alternatyva butu popieriaus ir medienos bendroves (UPM.HE, STERV.HE),
-        # kurios jau yra Medziagu sektoriuje.
-    ],
+    # Zaliavos (4GLD.DE, XAD6.DE, 8PSB.DE) ISIMTOS 2026-10-03: tai fondai, ne
+    # bendroves - jie negali daryti bendroves kritimo ir atsistatymo (Manto
+    # sprendimas "Fondus isimam").
     "Logistika ir mazmena": [
         "DHL.DE", "PST.MI", "BIM.PA", "ATO.PA",
         "ZAL.DE", "HFG.DE",
@@ -143,9 +131,6 @@ SEKTORIU_ETF = {
     "Nekilnojamas turtas ir statyba": "EXV8.DE",
     "Logistika ir mazmena": "EXH4.DE",
     "JAV antriniai listingai": "EXV3.DE",     # daugiausia technologijos
-    # Zaliavos savo sektoriaus ETF neturi — filtrui naudojam pati auksa,
-    # nes visi sio sektoriaus instrumentai juda panasiai
-    "Zaliavos": "4GLD.DE",
 }
 INDEKSAS = "EXSA.DE"
 
@@ -168,7 +153,7 @@ UNIVERSAS_US = {
                  "AMGN", "GILD", "VRTX", "REGN", "ISRG"],
     "Vartojimas ir prabanga": ["NKE", "SBUX", "MCD", "TJX", "LOW", "HD", "RL", "TPR"],
     "Maistas ir kasdienes prekes": ["PG", "KO", "PEP", "COST", "WMT", "MDLZ",
-                                    "CL", "KMB", "GIS", "K"],
+                                    "CL", "KMB", "GIS"],   # K isimtas 2026-10-03 (nebekotiruojamas)
     "Telekomai ir ziniasklaida": ["T", "VZ", "TMUS", "DIS", "NFLX", "CMCSA", "META"],
     "Keliones ir laisvalaikis": ["DAL", "UAL", "LUV", "AAL", "MAR", "HLT", "RCL",
                                  "CCL", "BKNG", "ABNB"],
