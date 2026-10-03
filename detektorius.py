@@ -1658,19 +1658,35 @@ def _amzius_min(pirmas_utc, pirmas_baras, dabar_baras):
         return 0
 
 
-def _uzbaigti_barai(sesija, dabar_ts=None):
-    """Be besiformuojancio paskutinio baro.
+SESIJOS_PABAIGOS_ATSARGA_MIN = 25   # Yahoo EU duomenys veluoja ~15-20 min
 
-    Ciklas sukasi 5 min zymuo + 60 s, tad JAV paskutinis baras paprastai turi
-    tik ~1 is 5 minuciu apyvartos. Tikrinant ji, apyvartos santykis (>= 1.2)
-    beveik visada nepraeidavo, ir kortele signala pamatydavo veliau nei
-    kalibracija ar baru perziura (auditas 2026-09-29: ORCL 10:15 vs 10:25).
+
+def _uzbaigti_barai(sesija, dabar_ts=None, rinka="eu"):
+    """Tik UZBAIGTI barai: kol sesija vyksta, paskutinis grazintas baras
+    visada laikomas nebaigtu.
+
+    Ciklas sukasi 5 min zymuo + 60 s, tad JAV paskutinis baras turi tik ~1 is
+    5 minuciu (auditas 2026-09-29: ORCL 10:15 vs 10:25). EU Yahoo duomenys
+    veluoja ~15-20 min, ir paskutinis grazintas EU baras irgi buna dalinis,
+    nors pagal laikrodi jis "seniai baigesi" - todel ankstesne laikrodzio
+    taisykle EU nepadejo: savaites zurnale (09-30..10-02) EU kortele
+    signala pamatydavo mediana 37 min veliau nei baru perziura, o 40% EU
+    signalu kortele visai praleido; JAV - 0 min ir 2 is 37.
+    Baras laikomas uzbaigtu, kai po jo jau yra kitas baras, arba kai sesija
+    pasibaige (uzdarymas + SESIJOS_PABAIGOS_ATSARGA_MIN).
     """
+    if not len(sesija):
+        return sesija
     if dabar_ts is None:
         dabar_ts = pd.Timestamp.now(tz="UTC")
-    if len(sesija) and sesija.index[-1] + pd.Timedelta(minutes=BARAS_MIN) > dabar_ts:
-        return sesija.iloc[:-1]
-    return sesija
+    tz = RINKOS[rinka]["tz"]
+    v = dabar_ts.tz_convert(tz)
+    pask = sesija.index[-1]
+    ses_d = (pask.tz_convert(tz) if pask.tzinfo is not None else pask).date()
+    if v.date() > ses_d or (v.hour * 60 + v.minute >=
+                            RINKOS[rinka]["uzdarymas"] + SESIJOS_PABAIGOS_ATSARGA_MIN):
+        return sesija
+    return sesija.iloc[:-1]
 
 
 def perziureti_dienos_barus(sesija, kd, rinka, zyme, t, ses, jau, dabar_ts=None):
@@ -1686,10 +1702,9 @@ def perziureti_dienos_barus(sesija, kd, rinka, zyme, t, ses, jau, dabar_ts=None)
     reikia = {tp for tp in (1, 2)
               if f"{zyme}|{t}|{tp}|{ses}|{PERZIUROS_ZYME}" not in jau}
     out = []
-    for i in range(S2_ORB_BARU + 3, len(sesija)):
+    n_baigtu = len(_uzbaigti_barai(sesija, dabar_ts, rinka))
+    for i in range(S2_ORB_BARU + 3, n_baigtu):
         if not reikia:
-            break
-        if sesija.index[i] + pd.Timedelta(minutes=BARAS_MIN) > dabar_ts:
             break
         iki = RINKOS[rinka]["uzdarymas"] - int(sesija["minute"].iloc[i])
         for sg in aptikti(sesija.iloc[:i + 1], kd, iki, rinka):
@@ -1743,7 +1758,7 @@ def paleisti_live(rinkos):
                 _KLAIDOS[kl] = _KLAIDOS.get(kl, 0) + 1
             # Signalas tikrinamas tik UZBAIGTAIS barais (kaip kalibracijoje);
             # dabartine kaina korteles progresui - is paskutinio baro.
-            det = _uzbaigti_barai(sesija)
+            det = _uzbaigti_barai(sesija, rinka=rinka)
             if len(det) < S2_ORB_BARU + 4:
                 continue
             iki = (RINKOS[rinka]["uzdarymas"] - int(det["minute"].iloc[-1]))
@@ -2333,12 +2348,26 @@ def savitikra():
               f"{s2['kliutys'] or 'nera'}")
 
     # --- besiformuojantis baras (auditas 2026-09-29) ----------------------
-    _ix = pd.date_range("2026-07-24 15:30", periods=4, freq="5min", tz="UTC")
+    _ix = pd.date_range("2026-07-24 10:00", periods=4, freq="5min", tz="Europe/Berlin")
     _sd = pd.DataFrame({"Close": [1.0, 2.0, 3.0, 4.0]}, index=_ix)
-    tikrinti("uzbaigti barai: besiformuojantis (15:45, dabar 15:46) atmetamas",
-             len(_uzbaigti_barai(_sd, pd.Timestamp("2026-07-24 15:46", tz="UTC"))), 3)
-    tikrinti("uzbaigti barai: uzbaigtas (15:45, dabar 15:50) paliekamas",
-             len(_uzbaigti_barai(_sd, pd.Timestamp("2026-07-24 15:50", tz="UTC"))), 4)
+    _B = lambda h: pd.Timestamp(f"2026-07-24 {h}", tz="Europe/Berlin").tz_convert("UTC")
+    tikrinti("uzbaigti barai: sesijai vykstant paskutinis (besiformuojantis) atmetamas",
+             len(_uzbaigti_barai(_sd, _B("10:16"), "eu")), 3)
+    tikrinti("uzbaigti barai: EU veluojantys duomenys - paskutinis atmetamas, "
+             "nors pagal laikrodi 'seniai baigesi'",
+             len(_uzbaigti_barai(_sd, _B("10:40"), "eu")), 3)
+    tikrinti("uzbaigti barai: po uzdarymo + atsargos - visi",
+             len(_uzbaigti_barai(_sd, _B("17:55"), "eu")), 4)
+    tikrinti("uzbaigti barai: dar ne po atsargos (17:54) - paskutinis atmetamas",
+             len(_uzbaigti_barai(_sd, _B("17:54"), "eu")), 3)
+    tikrinti("uzbaigti barai: kita diena - visi",
+             len(_uzbaigti_barai(_sd, _B("10:16") + pd.Timedelta(days=1), "eu")), 4)
+    _ixu = pd.date_range("2026-07-24 15:40", periods=4, freq="5min", tz="America/New_York")
+    _sdu = pd.DataFrame({"Close": [1.0, 2.0, 3.0, 4.0]}, index=_ixu)
+    _N = lambda h: pd.Timestamp(f"2026-07-24 {h}", tz="America/New_York").tz_convert("UTC")
+    tikrinti("uzbaigti barai: JAV iki 16:25 NY - paskutinis atmetamas, nuo 16:25 - visi",
+             (len(_uzbaigti_barai(_sdu, _N("16:24"), "us")),
+              len(_uzbaigti_barai(_sdu, _N("16:25"), "us"))), (3, 4))
 
     # --- KIEKVIENA salyga su riba iš ABIEJŲ pusių (auditas: isemus apyvartos
     # ar VWAP salyga, savitikra buvo zalia) ----------------------------------
@@ -3180,14 +3209,16 @@ def savitikra():
                                          {pv[0]["_raktas"]},
                                          dabar_ts=pd.Timestamp("2026-07-24 20:00", tz="UTC")),
                  [])
-        # 15-as baras (09:70=10:10) baigiasi 10:15 Berlyne = 08:15 UTC
-        tikrinti("baru perziura: besiformuojantis baras neimamas",
-                 perziureti_dienos_barus(ses_p, kd_p, "eu", "EU", "X", ix[0].date(), set(),
-                                         dabar_ts=pd.Timestamp("2026-07-24 08:14", tz="UTC")),
+        # 15-as baras (10:10) - PASKUTINIS grazintas, sesija vyksta -> dar nebaigtas
+        tikrinti("baru perziura: paskutinis grazintas baras sesijos metu neimamas",
+                 perziureti_dienos_barus(ses_p.iloc[:15], kd_p, "eu", "EU", "X",
+                                         ix[0].date(), set(),
+                                         dabar_ts=pd.Timestamp("2026-07-24 08:40", tz="UTC")),
                  [])
-        tikrinti("baru perziura: uzbaigtas baras imamas",
-                 len(perziureti_dienos_barus(ses_p, kd_p, "eu", "EU", "X", ix[0].date(), set(),
-                                             dabar_ts=pd.Timestamp("2026-07-24 08:15", tz="UTC"))),
+        tikrinti("baru perziura: atejus kitam barui jis jau imamas",
+                 len(perziureti_dienos_barus(ses_p.iloc[:16], kd_p, "eu", "EU", "X",
+                                             ix[0].date(), set(),
+                                             dabar_ts=pd.Timestamp("2026-07-24 08:40", tz="UTC"))),
                  1)
     finally:
         globals()["aptikti"] = _tikras_apt
