@@ -1,0 +1,42 @@
+name: Issilaikymo patikra (1 scenarijus, 10 min)
+
+# A (visi signalai, iejimas signalo bare) prieš B (signalas issilaike 10 min,
+# iejimas tada). Taisykles uzrasytos islaikymas.py virsuje PRIES paleidima.
+# Nieko nefiltruoja ir nieko nekomituoja. detektorius.py nelieciamas.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  islaikymas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install yfinance pandas numpy tzdata
+
+      - name: Patikrinti failus
+        run: |
+          for f in detektorius.py zymos.py islaikymas.py universas.py; do
+            test -f "$f" || (echo "KLAIDA - $f nerastas" && exit 1)
+          done
+
+      - name: Savitikra - detektorius
+        run: python detektorius.py --savitikra
+
+      - name: Savitikra - islaikymas
+        run: python islaikymas.py --savitikra
+
+      - name: Issilaikymo patikra
+        run: python islaikymas.py | tee islaikymas.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: islaikymas
+          path: islaikymas.txt
