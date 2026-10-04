@@ -1,0 +1,29 @@
+name: EODHD patikra 2 (MI, LS, VI)
+
+# Vienkartine patikra: raktas, biržų kodai, 5 min istorijos gylis, naujienos.
+# Raktas imamas is GitHub Secret EODHD_TOKEN ir niekur nespausdinamas.
+# Nieko nekeicia ir nieko nekomituoja.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  patikra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests yfinance pandas numpy
+
+      - name: Savitikra
+        run: python eodhd_patikra.py --savitikra
+
+      - name: EODHD patikra
+        env:
+          EODHD_TOKEN: ${{ secrets.EODHD_TOKEN }}
+        run: python eodhd_patikra2.py
