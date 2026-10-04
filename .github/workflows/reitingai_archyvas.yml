@@ -1,0 +1,40 @@
+name: Reitingai (Yahoo upgrades/downgrades)
+
+# Analitiku reitingu pakeitimu istorija visam universui -> Release.
+# Detektoriaus ir repo failu nekeicia. Rakto nereikia (Yahoo).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tik:
+        description: "Tuscia = visos akcijos ir Release. Skaicius = tik bandymas (be Release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  reitingai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install yfinance pandas numpy
+      - name: Savitikra
+        run: python reitingai_archyvas.py --savitikra
+      - name: Parsisiuntimas
+        env:
+          TIK: ${{ github.event.inputs.tik }}
+        run: |
+          if [ -n "$TIK" ]; then python reitingai_archyvas.py --tik "$TIK"; else python reitingai_archyvas.py; fi
+      - name: Release
+        if: ${{ github.event.inputs.tik == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "reitingai-${{ github.run_number }}" reitingai/reitingai.csv \
+            --title "Reitingai $(date -u +%Y-%m-%d)" --notes "Yahoo upgrades_downgrades visam universui."
