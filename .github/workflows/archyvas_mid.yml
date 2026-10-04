@@ -1,0 +1,55 @@
+name: EODHD archyvas MID (vidutines ir mazos akcijos)
+
+# T5 testui: universas pagal 2020-09 apyvarta, 5 min barai nuo 2020-10.
+# Raktas is GitHub Secret EODHD_TOKEN. Repo failu nekeicia; rezultatas - Release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tik:
+        description: "Tuscia = visos akcijos ir Release. Skaicius = tik bandymas (be Release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  archyvas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests yfinance pandas numpy
+      - name: Savitikra
+        run: |
+          python archyvas.py --savitikra
+          python archyvas_mid.py --savitikra
+      - name: Parsisiuntimas
+        env:
+          EODHD_TOKEN: ${{ secrets.EODHD_TOKEN }}
+          TIK: ${{ github.event.inputs.tik }}
+        run: |
+          if [ -n "$TIK" ]; then python archyvas_mid.py --tik "$TIK"; else python archyvas_mid.py; fi
+      - name: Supakavimas
+        if: always()
+        run: |
+          cd archyvas_mid
+          tar -cf ../mid_5m_eu.tar 5m/eu
+          tar -cf ../mid_5m_us.tar 5m/us
+          tar -cf ../mid_dienos.tar dienos
+          cp universas.csv ../mid_universas.csv
+          cp eodhd_ataskaita.csv ../mid_ataskaita.csv || true
+          cd ..
+          ls -lh mid_*
+      - name: Release
+        if: ${{ always() && github.event.inputs.tik == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "archyvas-mid-${{ github.run_number }}" mid_5m_eu.tar mid_5m_us.tar mid_dienos.tar mid_universas.csv mid_ataskaita.csv \
+            --title "EODHD archyvas MID $(date -u +%Y-%m-%d)" \
+            --notes "Vidutines ir mazos akcijos (universas pagal 2020-09 apyvarta), 5 min nuo 2020-10."
