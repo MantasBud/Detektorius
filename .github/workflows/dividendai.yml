@@ -1,0 +1,52 @@
+name: Dividendai (kartą per dieną)
+
+# Sudaro docs/dividendai.json: akcijos su paskelbta ex-data per 30 d.
+# Puslapis (detektorius.py) šį failą įdeda į skirtuką „Dividendai".
+# Signalų ir kortelių nekeičia. Raktas – GitHub Secret EODHD_TOKEN.
+
+on:
+  schedule:
+    - cron: "40 4 * * 1-5"      # 04:40 UTC, prieš pirmą detektoriaus pamainą
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dividendai
+  cancel-in-progress: false
+
+jobs:
+  dividendai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests pandas numpy yfinance
+
+      - name: Savitikra
+        run: python dividendai.py --savitikra
+
+      - name: Dividendai
+        env:
+          EODHD_TOKEN: ${{ secrets.EODHD_TOKEN }}
+        run: python dividendai.py
+
+      - name: Įrašymas
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add docs/dividendai.json
+          if git diff --cached --quiet; then echo "pakeitimų nėra"; exit 0; fi
+          git commit -m "Dividendai $(date -u +%Y-%m-%d)"
+          for i in 1 2 3; do
+            git pull --rebase && git push && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep 15
+          done
+          exit 1
