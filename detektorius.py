@@ -1084,6 +1084,20 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)
 .tuscia{color:var(--dim);padding:28px 4px;font-size:14px}
 footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
   border-top:1px solid var(--line);padding-top:14px}
+.skirt{display:flex;gap:4px;margin:12px 0 4px;border-bottom:1px solid var(--line)}
+.skirt button{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);
+  padding:8px 12px;font-size:14px;cursor:pointer;margin-bottom:-1px}
+.skirt button[aria-selected="true"]{color:var(--txt);border-bottom-color:var(--acc);font-weight:600}
+section[hidden]{display:none}
+.lent{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:14px}
+.lent table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.lent th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);
+  font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.lent td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.lent tr:last-child td{border-bottom:0}
+.lent td.sk,.lent th.sk{text-align:right}
+.apyt{color:var(--dim)}
+.pastaba{color:var(--dim);font-size:12px;margin-top:10px;line-height:1.5}
 @media (max-width:520px){.wrap{padding:16px 16px 48px}.tinkl{grid-template-columns:1fr}}
 </style>
 </head>
@@ -1097,6 +1111,12 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
   <div class="sub" id="laikmatis"></div>
 </header>
 
+<nav class="skirt" role="tablist">
+  <button id="sk-signalai-b" role="tab" aria-selected="true">Signalai</button>
+  <button id="sk-dividendai-b" role="tab" aria-selected="false">Dividendai</button>
+</nav>
+
+<section id="sk-signalai">
 <div class="zurnalas z" id="zurnalas" hidden></div>
 
 <div class="valdymas">
@@ -1107,6 +1127,11 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 </div>
 
 <div id="turinys"></div>
+</section>
+
+<section id="sk-dividendai" hidden>
+<div id="div-turinys"></div>
+</section>
 
 <footer>
   Pozicija 18&nbsp;000&nbsp;€. Sąnaudos: EU 10&nbsp;€ (lūžio taškas 0,0556&nbsp;%), JAV 5&nbsp;€ (0,0278&nbsp;%).
@@ -1239,8 +1264,58 @@ setInterval(()=>{
     'atnaujinimas po ' + Math.floor(liko/60) + ':' + String(Math.max(0,liko)%60).padStart(2,'0');
 }, 1000);
 
+function data_md(x){ return x ? String(x).slice(5) : '–'; }   // "2026-10-15" -> "10-15"
+
+function dividendai(){
+  const el = document.getElementById('div-turinys');
+  const d = DUOM.dividendai;
+  if (!d || !d.eilutes){
+    el.innerHTML = '<div class="tuscia">Dividendų duomenų dar nėra (atnaujinami kartą per dieną).</div>';
+    return;
+  }
+  const e = d.eilutes;
+  const t = d.atnaujinta ? new Date(d.atnaujinta) : null;
+  let h = `<div class="sub" style="margin-top:12px">Paskelbti dividendai su ex-data per ${d.langas_d||30} d. · ${e.length} akcijų`
+        + (t ? ' · atnaujinta ' + t.toLocaleDateString('lt-LT') : '') + '</div>';
+  if (!e.length){
+    el.innerHTML = h + '<div class="tuscia">Per artimiausias dienas paskelbtų dividendų nėra.</div>';
+    return;
+  }
+  h += `<div class="lent"><table><thead><tr>
+      <th>Akcija</th><th class="sk">Kaina €</th><th class="sk">Dividendas €/akc.</th>
+      <th>Ex-data</th><th>Fiksavimo d.</th><th>Mokėjimo d.</th></tr></thead><tbody>`;
+  for (const r of e){
+    const pj = (r.pajamingumas!==null && r.pajamingumas!==undefined) ? ` <span class="apyt">(${nr(r.pajamingumas,2)}%)</span>` : '';
+    h += `<tr>
+      <td><span class="tick" style="font-size:14px">${esc(r.tikeris)}</span>
+        <span class="zenk ${esc(r.rinka)}">${esc(r.rinka)}</span></td>
+      <td class="sk">${nr(r.kaina_eur)}</td>
+      <td class="sk">${r.suma_apytiksle?'<span class="apyt">~</span>':''}${nr(r.div_eur,3)}${pj}</td>
+      <td>${data_md(r.ex)}</td>
+      <td>${r.irasymo_apytiksle?'<span class="apyt">~</span>':''}${data_md(r.irasymo)}</td>
+      <td>${data_md(r.mokejimo)}</td></tr>`;
+  }
+  h += '</tbody></table></div>';
+  h += `<div class="pastaba">Dividendą gauna tas, kas akciją turi <b>prieš ex-datą</b> (pirkti vėliausiai dieną prieš ją).
+    „~" – apytiksliai: fiksavimo d. apskaičiuota (JAV = ex-data, EU = ex-data + 1 d. d.), arba suma – paskutinio išmokėto dividendo (Milano akcijos, Yahoo).
+    JAV sumos ir kainos perskaičiuotos į EUR. Šaltinis: EODHD.</div>`;
+  el.innerHTML = h;
+}
+
+function skirtukas(kuris){
+  for (const k of ['signalai','dividendai']){
+    document.getElementById('sk-'+k).hidden = (k !== kuris);
+    document.getElementById('sk-'+k+'-b').setAttribute('aria-selected', k === kuris);
+  }
+  try { history.replaceState(null, '', kuris === 'dividendai' ? '#dividendai' : location.pathname); } catch(e){}
+}
+document.getElementById('sk-signalai-b').addEventListener('click', ()=>skirtukas('signalai'));
+document.getElementById('sk-dividendai-b').addEventListener('click', ()=>skirtukas('dividendai'));
+
 piesti();
 zurnalas(DUOM.zurnalas);
+dividendai();
+if (location.hash === '#dividendai') skirtukas('dividendai');
 </script>
 </body>
 </html>
@@ -1317,6 +1392,21 @@ def _be_nan(o):
     return o
 
 
+DIVIDENDAI = "docs/dividendai.json"
+
+
+def dividendai_ikelti(kelias=None):
+    """Dividendu skirtuko duomenys (dividendai.py, kartą per dieną).
+    Jokio poveikio signalams ir kortelems: jei failo nera ar jis sugadintas -
+    skirtukas tiesiog rodo, kad duomenu nera."""
+    try:
+        with open(kelias or DIVIDENDAI, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) and isinstance(d.get("eilutes"), list) else None
+    except Exception:
+        return None
+
+
 def puslapis_html(eilutes, z):
     """Puslapi generuoja PATS detektorius, kaip ir senasis dip_reitingas.py.
 
@@ -1326,7 +1416,8 @@ def puslapis_html(eilutes, z):
     workflow perrasO faila.
     """
     duom = dict(atnaujinta=datetime.now(timezone.utc).isoformat(),
-                signalai=eilutes, zurnalas=zurnalo_santrauka(z))
+                signalai=eilutes, zurnalas=zurnalo_santrauka(z),
+                dividendai=dividendai_ikelti())
     # < > & pabegami i \u00xx: kitaip laukas su "</script>" isardytu puslapi.
     # json.dumps ju NEekranuoja, ir pirmoji savitikros versija to nepagavo,
     # nes pati skaldydavo teksta ties tuo paciu "</script>".
@@ -2660,6 +2751,33 @@ def savitikra():
     hp = puslapis_html([piktas], {})
     tikrinti("puslapis: JSON bloke nera neekranuoto '<' (neisardo <script>)",
              hp.count("<script>") == hp.count("</script>") == 1, True)
+
+    # --- dividendu skirtukas: nekeicia signalu, ekranuojamas, be failo nelūžta
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        kel = os.path.join(td, "d.json")
+        tikrinti("dividendai: failo nera -> None", dividendai_ikelti(kel), None)
+        with open(kel, "w") as f:
+            f.write("{sugadintas")
+        tikrinti("dividendai: sugadintas failas -> None", dividendai_ikelti(kel), None)
+        with open(kel, "w") as f:
+            json.dump(dict(atnaujinta="2026-10-05T04:40:00+00:00", langas_d=30, eilutes=[
+                dict(tikeris="</script><b>X", rinka="EU", kaina_eur=10.0, div_eur=0.5, ex="2026-10-15",
+                     irasymo="2026-10-16", irasymo_apytiksle=True, mokejimo="2026-10-20")]), f)
+        dv = dividendai_ikelti(kel)
+        tikrinti("dividendai: geras failas ikeliamas", len(dv["eilutes"]), 1)
+        sena = globals()["DIVIDENDAI"]
+        globals()["DIVIDENDAI"] = kel
+        try:
+            hp2 = puslapis_html([piktas], {})
+        finally:
+            globals()["DIVIDENDAI"] = sena
+        tikrinti("dividendai: puslapis su piktu tikeriu - vienas <script>",
+                 hp2.count("<script>") == hp2.count("</script>") == 1, True)
+        tikrinti("dividendai: signalu skirtukas numatytas (rodomas)",
+                 '<section id="sk-signalai">' in hp2 and '<section id="sk-dividendai" hidden>' in hp2, True)
+        tikrinti("dividendai: signalai puslapyje nepakito",
+                 hp2.split("const DUOM = ")[1].count('"tickeris"'), 1)
 
     tuscias = pd.DataFrame()
     variantu_lentele(tuscias)                      # neturi luzti
