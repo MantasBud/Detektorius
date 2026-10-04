@@ -32,7 +32,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 
-from eodhd_patikra import _gauti, eodhd_simbolis
+from archyvas import gauti as _gauti          # su pakartojimais (429/5xx); raktas nespausdinamas
+from eodhd_patikra import eodhd_simbolis
 
 LANGAS_D = 30
 ISVESTIS = "docs/dividendai.json"
@@ -62,11 +63,12 @@ def irasymo_data(ex, rinka, duota=None):
 
 
 def artimiausi(irasai, siandien, langas=LANGAS_D):
-    """EODHD /div irasai -> tie, kuriu ex-data [siandien, siandien+langas]."""
+    """EODHD /div irasai -> tie, kuriu ex-data (siandien, siandien+langas].
+    Ex-data siandien neberodoma: ta diena pirkti jau per velu."""
     out = []
     for r in irasai or []:
         ex = _d(r.get("date"))
-        if ex and siandien <= ex <= siandien + timedelta(days=langas):
+        if ex and siandien < ex <= siandien + timedelta(days=langas):
             out.append(r)
     return sorted(out, key=lambda r: r["date"])
 
@@ -112,7 +114,7 @@ def yahoo_irasai(t, siandien):
         tk = yf.Ticker(t)
         kal = tk.calendar or {}
         ex = _d(kal.get("Ex-Dividend Date"))
-        if not ex or not (siandien <= ex <= siandien + timedelta(days=LANGAS_D)):
+        if not ex or not (siandien < ex <= siandien + timedelta(days=LANGAS_D)):
             return [], None
         div = tk.dividends
         suma = float(div.iloc[-1]) if div is not None and len(div) else None
@@ -156,7 +158,8 @@ def sudaryti(tikeriai, token, siandien=None, gauti=None, yahoo=None):
             ex = _d(r.get("date"))
             cur = r.get("currency") or kaina_cur
             k = kurs.eur(cur)
-            suma = r.get("value")
+            # unadjustedValue - paskelbta suma; value gali buti perskaiciuota del velesniu splitu
+            suma = r.get("unadjustedValue", r.get("value"))
             div_eur = float(suma) * k if (suma is not None and k) else None
             ir, apyt = irasymo_data(ex, rinka, r.get("recordDate"))
             kaina_eur = kaina * k_kaina if (kaina and k_kaina) else None
@@ -206,7 +209,7 @@ def savitikra():
     s = date(2026, 10, 5)
     ir = [dict(date="2026-10-01", value=1), dict(date="2026-10-05", value=2),
           dict(date="2026-11-04", value=3), dict(date="2026-11-05", value=4)]
-    tikrinti("langas [siandien, +30] imtinai", [r["value"] for r in artimiausi(ir, s)], [2, 3])
+    tikrinti("langas (siandien, +30]: siandienos ex neberodoma", [r["value"] for r in artimiausi(ir, s)], [3])
     tikrinti("JAV irasymo = ex (T+1)", irasymo_data(date(2026, 10, 9), "us"), (date(2026, 10, 9), True))
     tikrinti("EU penktadienis -> pirmadienis", irasymo_data(date(2026, 10, 9), "eu"), (date(2026, 10, 12), True))
     tikrinti("duota data nekeiciama", irasymo_data(date(2026, 10, 9), "eu", "2026-10-13"), (date(2026, 10, 13), False))
@@ -216,7 +219,8 @@ def savitikra():
             return [dict(date="2026-11-13", recordDate="2026-11-13", paymentDate="2026-12-01",
                          value=0.53, currency="USD")], None
         if kelias == "div/MC.PA":
-            return [dict(date="2026-12-01", recordDate=None, paymentDate="2026-12-03", value=5.5, currency="EUR"),
+            return [dict(date="2026-12-01", recordDate=None, paymentDate="2026-12-03", value=2.75,
+                         unadjustedValue=5.5, currency="EUR"),
                     dict(date="2026-04-28", value=7.5, currency="EUR")], None
         if kelias == "div/PRY.MI":
             return None, "HTTP 404"
