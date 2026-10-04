@@ -1,0 +1,68 @@
+name: EODHD archyvas (5 min nuo 2020-10)
+
+# EODHD plano 1 zingsnis. Parsisiuncia 5 min barus, dienos kainas ir splitus
+# visam universui (be MI/LS/VI) ir ikelia kaip GitHub Release priedus.
+# Raktas imamas is GitHub Secret EODHD_TOKEN ir niekur nespausdinamas.
+# Repo failu nekeicia ir nieko nekomituoja (Release sukuria tik zyma).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tik:
+        description: "Bandymui: kiek tikeriu is kiekvienos rinkos (tuscia = visi, tada ir Release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  archyvas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests yfinance pandas numpy
+
+      - name: Savitikra
+        run: |
+          python eodhd_patikra.py --savitikra
+          python archyvas.py --savitikra
+
+      - name: Parsisiuntimas
+        env:
+          EODHD_TOKEN: ${{ secrets.EODHD_TOKEN }}
+          TIK: ${{ github.event.inputs.tik }}
+        run: |
+          if [ -n "$TIK" ]; then python archyvas.py --tik "$TIK"; else python archyvas.py; fi
+
+      - name: Supakavimas
+        run: |
+          cd archyvas
+          tar -cf ../eodhd_5m_eu.tar 5m/eu
+          tar -cf ../eodhd_5m_us.tar 5m/us
+          tar -cf ../eodhd_dienos.tar dienos
+          cp ataskaita.csv ../eodhd_ataskaita.csv
+          cd ..
+          ls -lh eodhd_*
+
+      - name: Ataskaita (artefaktas)
+        uses: actions/upload-artifact@v4
+        with:
+          name: eodhd-ataskaita
+          path: eodhd_ataskaita.csv
+
+      - name: Release
+        if: ${{ github.event.inputs.tik == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "archyvas-${{ github.run_number }}" \
+            eodhd_5m_eu.tar eodhd_5m_us.tar eodhd_dienos.tar eodhd_ataskaita.csv \
+            --title "EODHD archyvas $(date -u +%Y-%m-%d)" \
+            --notes "5 min barai nuo 2020-10 (EODHD), dienos kainos ir splitai. Be MI/LS/VI. Formatas: .npz (ts + OHLCV), skaityti su archyvas.skaityti_5m()."
