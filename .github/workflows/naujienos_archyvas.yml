@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       tik:
-        description: "Bandymui: kiek akciju is rinkos + pavyzdines (tuscia = visos, tada ir Release)"
+        description: "Tuscia = visos akcijos ir Release. Skaicius = tik bandymas (be Release)"
         required: false
-        default: "3"
+        default: ""
 
 permissions:
   contents: write
