@@ -1,0 +1,53 @@
+name: EODHD naujienos (archyvas ir padengimas)
+
+# EODHD plano 3 zingsnis. Parsisiuncia naujienas nuo 2020-10 visam universui
+# (EU: biržos simbolis + .F; JAV: .US) ir parodo padengima.
+# Raktas is GitHub Secret EODHD_TOKEN, niekur nespausdinamas. Repo failu nekeicia.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tik:
+        description: "Bandymui: kiek akciju is rinkos + pavyzdines (tuscia = visos, tada ir Release)"
+        required: false
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  naujienos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests pandas numpy
+
+      - name: Savitikra
+        run: python naujienos_archyvas.py --savitikra
+
+      - name: Parsisiuntimas
+        env:
+          EODHD_TOKEN: ${{ secrets.EODHD_TOKEN }}
+          TIK: ${{ github.event.inputs.tik }}
+        run: |
+          if [ -n "$TIK" ]; then python naujienos_archyvas.py --tik "$TIK"; else python naujienos_archyvas.py; fi
+
+      - name: Supakavimas
+        run: |
+          tar -cf eodhd_naujienos.tar naujienos
+          ls -lh eodhd_naujienos.tar
+
+      - name: Release
+        if: ${{ github.event.inputs.tik == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "naujienos-${{ github.run_number }}" eodhd_naujienos.tar \
+            --title "EODHD naujienos $(date -u +%Y-%m-%d)" \
+            --notes "Naujienos nuo 2020-10 (EODHD), EU: biržos simbolis + .F, JAV: .US. Formatas: naujienos/<tikeris>.jsonl.gz."
