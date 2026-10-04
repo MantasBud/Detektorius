@@ -1,1003 +1,998 @@
 {
- "_atnaujinta": "2026-09-27T16:23:28.490083",
+ "_atnaujinta": "2026-10-04T19:18:31.686320",
  "ABEA.DE": {
   "kita_ex": "2026-12-04",
-  "suma": 0.19296199,
-  "dienu_iki": 68
+  "suma": 0.195426,
+  "dienu_iki": 61
  },
  "ABI.BR": {
   "kita_ex": "2026-12-04",
   "suma": 1.0,
-  "dienu_iki": 68
+  "dienu_iki": 61
  },
  "ABN.AS": {
   "kita_ex": "2027-01-26",
   "suma": 0.68,
-  "dienu_iki": 121
+  "dienu_iki": 114
  },
  "AC.PA": {
   "kita_ex": "2027-05-31",
   "suma": 1.35,
-  "dienu_iki": 246
+  "dienu_iki": 239
  },
  "ACA.PA": {
   "kita_ex": "2027-05-26",
   "suma": 1.13,
-  "dienu_iki": 241
+  "dienu_iki": 234
  },
  "AD.AS": {
   "kita_ex": "2026-12-04",
   "suma": 0.51,
-  "dienu_iki": 68
+  "dienu_iki": 61
  },
  "ADS.DE": {
   "kita_ex": "2027-05-07",
   "suma": 2.8,
-  "dienu_iki": 222
+  "dienu_iki": 215
  },
  "AENA.MC": {
   "kita_ex": "2027-04-17",
   "suma": 1.09,
-  "dienu_iki": 202
+  "dienu_iki": 195
  },
  "AF.PA": {
   "kita_ex": "2027-05-14",
   "suma": 2.925217,
-  "dienu_iki": 229
+  "dienu_iki": 222
  },
  "AGN.AS": {
   "kita_ex": "2026-12-03",
   "suma": 0.21,
-  "dienu_iki": 67
+  "dienu_iki": 60
  },
  "AI.PA": {
   "kita_ex": "2027-05-17",
   "suma": 3.363636,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "AIR.PA": {
   "kita_ex": "2027-04-19",
   "suma": 3.2,
-  "dienu_iki": 204
+  "dienu_iki": 197
  },
  "AIXA.DE": {
   "kita_ex": "2027-05-13",
   "suma": 0.15,
-  "dienu_iki": 228
+  "dienu_iki": 221
  },
  "AKE.PA": {
   "kita_ex": "2027-05-24",
   "suma": 3.6,
-  "dienu_iki": 239
+  "dienu_iki": 232
  },
  "AKZA.AS": {
   "kita_ex": "2026-10-26",
   "suma": 1.54,
-  "dienu_iki": 29
+  "dienu_iki": 22
  },
  "ALM.MC": {
   "kita_ex": "2027-05-13",
   "suma": 0.187,
-  "dienu_iki": 228
+  "dienu_iki": 221
  },
  "ALV.DE": {
   "kita_ex": "2027-05-07",
   "suma": 17.1,
-  "dienu_iki": 222
+  "dienu_iki": 215
  },
  "AM.PA": {
   "kita_ex": "2027-05-16",
   "suma": 4.78,
-  "dienu_iki": 231
+  "dienu_iki": 224
  },
  "AMS.MC": {
   "kita_ex": "2026-12-30",
   "suma": 1.01,
-  "dienu_iki": 94
+  "dienu_iki": 87
  },
  "APC.DE": {
   "kita_ex": "2026-11-09",
-  "suma": 0.236817,
-  "dienu_iki": 43
+  "suma": 0.23984101,
+  "dienu_iki": 36
  },
  "ASM.AS": {
   "kita_ex": "2027-05-12",
   "suma": 3.25,
-  "dienu_iki": 227
+  "dienu_iki": 220
  },
  "ASML.AS": {
   "kita_ex": "2026-10-29",
   "suma": 1.88,
-  "dienu_iki": 32
+  "dienu_iki": 25
  },
  "ASRNL.AS": {
   "kita_ex": "2026-12-05",
   "suma": 1.39,
-  "dienu_iki": 69
+  "dienu_iki": 62
  },
  "ATE.PA": {
   "kita_ex": "2027-06-22",
   "suma": 1.5,
-  "dienu_iki": 268
+  "dienu_iki": 261
  },
  "ATO.PA": {
   "kita_ex": "2027-05-01",
   "suma": 66.86445,
-  "dienu_iki": 216
+  "dienu_iki": 209
  },
  "AVIO.MI": {
   "kita_ex": "2027-05-24",
   "suma": 0.14846,
-  "dienu_iki": 239
+  "dienu_iki": 232
  },
  "BAMI.MI": {
   "kita_ex": "2027-02-01",
   "suma": 0.54,
-  "dienu_iki": 127
+  "dienu_iki": 120
  },
  "BAS.DE": {
   "kita_ex": "2027-05-03",
   "suma": 2.25,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "BAYN.DE": {
   "kita_ex": "2027-04-26",
   "suma": 0.11,
-  "dienu_iki": 211
+  "dienu_iki": 204
  },
  "BBVA.MC": {
   "kita_ex": "2026-10-07",
   "suma": 0.6,
-  "dienu_iki": 10
+  "dienu_iki": 3
  },
  "BEI.DE": {
   "kita_ex": "2027-04-27",
   "suma": 1.0,
-  "dienu_iki": 212
+  "dienu_iki": 205
  },
  "BESI.AS": {
   "kita_ex": "2027-04-26",
   "suma": 1.58,
-  "dienu_iki": 211
+  "dienu_iki": 204
  },
  "BIM.PA": {
   "kita_ex": "2027-06-09",
   "suma": 0.98,
-  "dienu_iki": 255
+  "dienu_iki": 248
  },
  "BIRG.IR": {
-  "kita_ex": "2026-11-11",
-  "suma": 0.45,
-  "dienu_iki": 45
+  "kita_ex": "2027-04-21",
+  "suma": 0.39,
+  "dienu_iki": 199
  },
  "BMW.DE": {
   "kita_ex": "2027-05-13",
   "suma": 4.4,
-  "dienu_iki": 228
+  "dienu_iki": 221
  },
  "BN.PA": {
   "kita_ex": "2027-05-03",
   "suma": 2.25,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "BNP.PA": {
   "kita_ex": "2027-07-21",
   "suma": 3.23,
-  "dienu_iki": 297
+  "dienu_iki": 290
  },
  "BNR.DE": {
   "kita_ex": "2027-05-20",
   "suma": 1.9,
-  "dienu_iki": 235
+  "dienu_iki": 228
  },
  "BPE.MI": {
   "kita_ex": "2027-05-17",
   "suma": 0.56,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "BRE.MI": {
   "kita_ex": "2027-05-17",
   "suma": 0.3,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "BZU.MI": {
   "kita_ex": "2027-05-17",
   "suma": 0.7,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "CA.PA": {
   "kita_ex": "2027-07-27",
   "suma": 0.21,
-  "dienu_iki": 303
+  "dienu_iki": 296
  },
  "CABK.MC": {
   "kita_ex": "2026-11-06",
   "suma": 0.3321,
-  "dienu_iki": 40
+  "dienu_iki": 33
  },
  "CAP.PA": {
   "kita_ex": "2027-06-01",
   "suma": 3.4,
-  "dienu_iki": 247
+  "dienu_iki": 240
  },
  "CBK.DE": {
   "kita_ex": "2027-05-20",
   "suma": 1.1,
-  "dienu_iki": 235
+  "dienu_iki": 228
  },
  "COL.MC": {
   "kita_ex": "2027-07-10",
   "suma": 0.32,
-  "dienu_iki": 286
+  "dienu_iki": 279
  },
  "COLR.BR": {
-  "kita_ex": "2027-09-24",
+  "kita_ex": "2027-10-01",
   "suma": 1.38,
   "dienu_iki": 362
  },
  "CON.DE": {
   "kita_ex": "2027-05-03",
   "suma": 2.7,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "CPR.MI": {
   "kita_ex": "2027-04-19",
   "suma": 0.1,
-  "dienu_iki": 204
+  "dienu_iki": 197
  },
  "CS.PA": {
   "kita_ex": "2027-05-10",
   "suma": 2.32,
-  "dienu_iki": 225
+  "dienu_iki": 218
  },
  "DBAN.DE": {
   "kita_ex": "2027-06-02",
   "suma": 1.0,
-  "dienu_iki": 248
+  "dienu_iki": 241
  },
  "DBK.DE": {
   "kita_ex": "2027-05-28",
   "suma": 1.0,
-  "dienu_iki": 243
+  "dienu_iki": 236
  },
  "DHL.DE": {
   "kita_ex": "2027-05-03",
   "suma": 1.9,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "DIA.MI": {
   "kita_ex": "2027-05-17",
   "suma": 1.3,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "DIM.PA": {
   "kita_ex": "2027-03-30",
   "suma": 0.69,
-  "dienu_iki": 184
+  "dienu_iki": 177
  },
  "DSFIR.AS": {
   "kita_ex": "2027-05-10",
   "suma": 2.5,
-  "dienu_iki": 225
+  "dienu_iki": 218
  },
  "DSY.PA": {
   "kita_ex": "2027-05-27",
   "suma": 0.27,
-  "dienu_iki": 242
+  "dienu_iki": 235
  },
  "DTE.DE": {
   "kita_ex": "2027-03-31",
   "suma": 1.0,
-  "dienu_iki": 185
+  "dienu_iki": 178
  },
  "DUE.DE": {
   "kita_ex": "2027-05-28",
   "suma": 0.8,
-  "dienu_iki": 243
+  "dienu_iki": 236
  },
  "EDP.LS": {
   "kita_ex": "2027-05-07",
   "suma": 0.205,
-  "dienu_iki": 222
+  "dienu_iki": 215
  },
  "EDPR.LS": {
   "kita_ex": "2027-05-10",
   "suma": 0.124,
-  "dienu_iki": 225
+  "dienu_iki": 218
  },
  "EL.PA": {
   "kita_ex": "2027-05-03",
   "suma": 4.0,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "ELE.MC": {
   "kita_ex": "2027-01-06",
   "suma": 1.084,
-  "dienu_iki": 101
+  "dienu_iki": 94
  },
  "ELISA.HE": {
   "kita_ex": "2027-07-08",
   "suma": 0.6,
-  "dienu_iki": 284
+  "dienu_iki": 277
  },
  "ENEL.MI": {
   "kita_ex": "2027-01-18",
   "suma": 0.26,
-  "dienu_iki": 113
+  "dienu_iki": 106
  },
  "ENGI.PA": {
   "kita_ex": "2027-02-03",
   "suma": 1.35,
-  "dienu_iki": 129
+  "dienu_iki": 122
  },
  "ENI.MI": {
   "kita_ex": "2027-01-18",
   "suma": 0.27,
-  "dienu_iki": 113
+  "dienu_iki": 106
  },
  "EOAN.DE": {
   "kita_ex": "2027-04-23",
   "suma": 0.57,
-  "dienu_iki": 208
+  "dienu_iki": 201
  },
  "EVD.DE": {
   "kita_ex": "2027-05-28",
   "suma": 1.44,
-  "dienu_iki": 243
+  "dienu_iki": 236
  },
  "EVK.DE": {
   "kita_ex": "2027-06-04",
   "suma": 1.0,
-  "dienu_iki": 250
+  "dienu_iki": 243
  },
  "EXA.PA": {
   "kita_ex": "2027-06-16",
   "suma": 0.32,
-  "dienu_iki": 262
+  "dienu_iki": 255
  },
  "FB2A.DE": {
   "kita_ex": "2026-12-22",
-  "suma": 0.46047747,
-  "dienu_iki": 86
+  "suma": 0.46635747,
+  "dienu_iki": 79
  },
  "FME.DE": {
   "kita_ex": "2027-05-21",
   "suma": 1.49,
-  "dienu_iki": 236
+  "dienu_iki": 229
  },
  "FORTUM.HE": {
   "kita_ex": "2027-03-25",
   "suma": 0.74,
-  "dienu_iki": 179
+  "dienu_iki": 172
  },
  "FRE.DE": {
   "kita_ex": "2027-05-23",
   "suma": 1.05,
-  "dienu_iki": 238
+  "dienu_iki": 231
  },
  "FRVIA.PA": {
   "kita_ex": "2027-06-07",
   "suma": 0.5,
-  "dienu_iki": 253
+  "dienu_iki": 246
  },
  "G.MI": {
   "kita_ex": "2027-05-17",
   "suma": 1.64,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "GALP.LS": {
   "kita_ex": "2026-12-30",
   "suma": 0.35,
-  "dienu_iki": 94
+  "dienu_iki": 87
  },
  "GFC.PA": {
   "kita_ex": "2026-11-09",
   "suma": 2.75,
-  "dienu_iki": 43
+  "dienu_iki": 36
  },
  "GLE.PA": {
   "kita_ex": "2027-05-31",
   "suma": 1.0,
-  "dienu_iki": 246
+  "dienu_iki": 239
  },
  "GRF.MC": {
   "kita_ex": "2027-01-01",
   "suma": 0.082379,
-  "dienu_iki": 96
+  "dienu_iki": 89
  },
  "HEI.DE": {
   "kita_ex": "2027-05-13",
   "suma": 3.6,
-  "dienu_iki": 228
+  "dienu_iki": 221
  },
  "HEIA.AS": {
   "kita_ex": "2027-04-28",
   "suma": 0.76,
-  "dienu_iki": 213
+  "dienu_iki": 206
  },
  "HEN3.DE": {
   "kita_ex": "2027-04-27",
   "suma": 2.07,
-  "dienu_iki": 212
+  "dienu_iki": 205
  },
  "HNR1.DE": {
   "kita_ex": "2027-05-06",
   "suma": 12.5,
-  "dienu_iki": 221
+  "dienu_iki": 214
  },
  "HO.PA": {
   "kita_ex": "2026-11-02",
   "suma": 2.95,
-  "dienu_iki": 36
+  "dienu_iki": 29
  },
  "IAG.MC": {
   "kita_ex": "2026-12-24",
   "suma": 0.05,
-  "dienu_iki": 88
+  "dienu_iki": 81
  },
  "IBE.MC": {
   "kita_ex": "2026-11-04",
   "suma": 0.427,
-  "dienu_iki": 38
+  "dienu_iki": 31
  },
  "IBM.DE": {
   "kita_ex": "2026-11-09",
-  "suma": 1.4822991,
-  "dienu_iki": 43
+  "suma": 1.501227,
+  "dienu_iki": 36
  },
  "ICAD.PA": {
   "kita_ex": "2026-12-22",
   "suma": 1.92,
-  "dienu_iki": 86
+  "dienu_iki": 79
  },
  "IFX.DE": {
   "kita_ex": "2027-02-19",
   "suma": 0.35,
-  "dienu_iki": 145
+  "dienu_iki": 138
  },
  "IGD.MI": {
   "kita_ex": "2027-05-03",
   "suma": 0.15,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "IMCD.AS": {
   "kita_ex": "2027-05-02",
   "suma": 1.81,
-  "dienu_iki": 217
+  "dienu_iki": 210
  },
  "INGA.AS": {
   "kita_ex": "2026-11-18",
   "suma": 0.4,
-  "dienu_iki": 52
+  "dienu_iki": 45
  },
  "INL.DE": {
   "kita_ex": "2026-11-13",
-  "suma": 0.1096375,
-  "dienu_iki": 47
+  "suma": 0.1110375,
+  "dienu_iki": 40
  },
  "IPN.PA": {
   "kita_ex": "2027-06-03",
   "suma": 1.6,
-  "dienu_iki": 249
+  "dienu_iki": 242
  },
  "ISP.MI": {
   "kita_ex": "2026-11-16",
   "suma": 0.19,
-  "dienu_iki": 50
+  "dienu_iki": 43
  },
  "ITX.MC": {
   "kita_ex": "2026-10-28",
   "suma": 0.875,
-  "dienu_iki": 31
+  "dienu_iki": 24
  },
  "JUN3.DE": {
   "kita_ex": "2027-05-20",
   "suma": 0.29,
-  "dienu_iki": 235
+  "dienu_iki": 228
  },
  "KBC.BR": {
   "kita_ex": "2026-11-16",
   "suma": 4.1,
-  "dienu_iki": 50
+  "dienu_iki": 43
  },
  "KER.PA": {
   "kita_ex": "2026-10-20",
   "suma": 2.75,
-  "dienu_iki": 23
+  "dienu_iki": 16
  },
  "KGX.DE": {
   "kita_ex": "2027-05-29",
   "suma": 0.62,
-  "dienu_iki": 244
+  "dienu_iki": 237
  },
  "KPN.AS": {
   "kita_ex": "2026-11-05",
   "suma": 0.08,
-  "dienu_iki": 39
+  "dienu_iki": 32
  },
  "KRZ.IR": {
   "kita_ex": "2026-10-08",
   "suma": 0.98,
-  "dienu_iki": 11
+  "dienu_iki": 4
  },
  "LDO.MI": {
   "kita_ex": "2027-06-21",
   "suma": 0.63,
-  "dienu_iki": 267
+  "dienu_iki": 260
  },
  "LEG.DE": {
   "kita_ex": "2027-05-27",
   "suma": 2.92,
-  "dienu_iki": 242
+  "dienu_iki": 235
  },
  "LHA.DE": {
   "kita_ex": "2027-05-14",
   "suma": 0.33,
-  "dienu_iki": 229
+  "dienu_iki": 222
  },
  "LR.PA": {
   "kita_ex": "2027-05-28",
   "suma": 2.38,
-  "dienu_iki": 243
+  "dienu_iki": 236
  },
  "LXS.DE": {
   "kita_ex": "2027-05-23",
   "suma": 0.1,
-  "dienu_iki": 238
+  "dienu_iki": 231
  },
  "MAP.MC": {
   "kita_ex": "2026-11-24",
   "suma": 0.110372,
-  "dienu_iki": 58
+  "dienu_iki": 51
  },
  "MBG.DE": {
   "kita_ex": "2027-04-19",
   "suma": 3.5,
-  "dienu_iki": 204
+  "dienu_iki": 197
  },
  "MC.PA": {
   "kita_ex": "2027-02-16",
   "suma": 7.5,
-  "dienu_iki": 142
+  "dienu_iki": 135
  },
  "MEL.MC": {
   "kita_ex": "2027-07-05",
   "suma": 0.1736,
-  "dienu_iki": 281
+  "dienu_iki": 274
  },
  "ML.PA": {
   "kita_ex": "2027-05-25",
   "suma": 1.38,
-  "dienu_iki": 240
+  "dienu_iki": 233
  },
  "MONC.MI": {
   "kita_ex": "2027-05-17",
   "suma": 1.4,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "MRK.DE": {
   "kita_ex": "2027-04-26",
   "suma": 2.2,
-  "dienu_iki": 211
+  "dienu_iki": 204
  },
  "MRL.MC": {
   "kita_ex": "2026-10-29",
   "suma": 0.0151,
-  "dienu_iki": 32
+  "dienu_iki": 25
  },
  "MSF.DE": {
   "kita_ex": "2026-11-19",
-  "suma": 0.79816103,
-  "dienu_iki": 53
+  "suma": 0.808353,
+  "dienu_iki": 46
  },
  "MT.AS": {
   "kita_ex": "2027-02-02",
   "suma": 0.130039,
-  "dienu_iki": 128
+  "dienu_iki": 121
  },
  "MTX.DE": {
   "kita_ex": "2027-05-08",
   "suma": 3.6,
-  "dienu_iki": 223
- },
- "MUB.DE": {
-  "kita_ex": "2027-07-29",
-  "suma": 1.5,
-  "dienu_iki": 305
+  "dienu_iki": 216
  },
  "MUV2.DE": {
   "kita_ex": "2027-04-29",
   "suma": 24.0,
-  "dienu_iki": 214
+  "dienu_iki": 207
  },
  "NDA.DE": {
   "kita_ex": "2027-02-12",
   "suma": 1.6,
-  "dienu_iki": 138
+  "dienu_iki": 131
  },
  "NEM.DE": {
   "kita_ex": "2027-05-23",
   "suma": 0.68,
-  "dienu_iki": 238
+  "dienu_iki": 231
  },
  "NESTE.HE": {
   "kita_ex": "2027-03-25",
   "suma": 0.2,
-  "dienu_iki": 179
+  "dienu_iki": 172
  },
  "NEX.PA": {
   "kita_ex": "2027-05-24",
   "suma": 2.9,
-  "dienu_iki": 239
+  "dienu_iki": 232
  },
  "NN.AS": {
   "kita_ex": "2026-11-04",
   "suma": 1.55,
-  "dienu_iki": 38
+  "dienu_iki": 31
  },
  "NOKIA.HE": {
   "kita_ex": "2026-10-26",
   "suma": 0.04,
-  "dienu_iki": 29
+  "dienu_iki": 22
  },
  "NOS.LS": {
   "kita_ex": "2027-05-05",
   "suma": 0.45,
-  "dienu_iki": 220
+  "dienu_iki": 213
  },
  "NVD.DE": {
   "kita_ex": "2026-12-11",
-  "suma": 0.219275,
-  "dienu_iki": 75
+  "suma": 0.222075,
+  "dienu_iki": 68
  },
  "OMV.VI": {
   "kita_ex": "2027-06-07",
   "suma": 4.4,
-  "dienu_iki": 253
+  "dienu_iki": 246
  },
  "OR.PA": {
   "kita_ex": "2027-04-28",
   "suma": 7.2,
-  "dienu_iki": 213
+  "dienu_iki": 206
  },
  "ORA.PA": {
   "kita_ex": "2026-12-10",
   "suma": 0.45,
-  "dienu_iki": 74
+  "dienu_iki": 67
  },
  "ORNBV.HE": {
   "kita_ex": "2027-03-03",
   "suma": 0.9,
-  "dienu_iki": 157
+  "dienu_iki": 150
  },
  "P911.DE": {
   "kita_ex": "2027-06-06",
   "suma": 1.01,
-  "dienu_iki": 252
+  "dienu_iki": 245
  },
  "PAH3.DE": {
   "kita_ex": "2027-06-06",
   "suma": 1.51,
-  "dienu_iki": 252
+  "dienu_iki": 245
  },
  "PHIA.AS": {
   "kita_ex": "2027-05-14",
   "suma": 0.85,
-  "dienu_iki": 229
+  "dienu_iki": 222
  },
  "PIRC.MI": {
   "kita_ex": "2027-07-05",
   "suma": 0.34,
-  "dienu_iki": 281
+  "dienu_iki": 274
  },
  "PROX.BR": {
   "kita_ex": "2027-01-27",
   "suma": 0.3,
-  "dienu_iki": 122
+  "dienu_iki": 115
  },
  "PRX.AS": {
   "kita_ex": "2026-10-29",
   "suma": 0.2,
-  "dienu_iki": 32
+  "dienu_iki": 25
  },
  "PRY.MI": {
   "kita_ex": "2027-04-19",
   "suma": 0.9,
-  "dienu_iki": 204
+  "dienu_iki": 197
  },
  "PST.MI": {
   "kita_ex": "2027-01-18",
   "suma": 0.85,
-  "dienu_iki": 113
+  "dienu_iki": 106
  },
  "PUB.PA": {
   "kita_ex": "2027-07-01",
   "suma": 3.75,
-  "dienu_iki": 277
+  "dienu_iki": 270
  },
  "PUM.DE": {
   "kita_ex": "2027-05-21",
   "suma": 0.61,
-  "dienu_iki": 236
+  "dienu_iki": 229
  },
  "QCI.DE": {
   "kita_ex": "2026-12-03",
-  "suma": 0.80693203,
-  "dienu_iki": 67
+  "suma": 0.817236,
+  "dienu_iki": 60
  },
  "QIA.DE": {
   "kita_ex": "2027-01-08",
-  "suma": 0.306985,
-  "dienu_iki": 103
+  "suma": 0.310905,
+  "dienu_iki": 96
  },
  "R3NK.DE": {
   "kita_ex": "2027-06-03",
   "suma": 0.58,
-  "dienu_iki": 249
+  "dienu_iki": 242
  },
  "RAA.DE": {
   "kita_ex": "2027-05-02",
   "suma": 20.0,
-  "dienu_iki": 217
+  "dienu_iki": 210
  },
  "RCO.PA": {
   "kita_ex": "2027-07-26",
   "suma": 0.75,
-  "dienu_iki": 302
+  "dienu_iki": 295
  },
  "RCS.MI": {
   "kita_ex": "2027-05-17",
   "suma": 0.07,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "REC.MI": {
   "kita_ex": "2026-11-16",
   "suma": 0.71,
-  "dienu_iki": 50
+  "dienu_iki": 43
  },
  "RED.MC": {
   "kita_ex": "2026-12-28",
   "suma": 0.6,
-  "dienu_iki": 92
+  "dienu_iki": 85
  },
  "REP.MC": {
   "kita_ex": "2027-01-08",
   "suma": 0.551,
-  "dienu_iki": 103
+  "dienu_iki": 96
  },
  "RHM.DE": {
   "kita_ex": "2027-05-12",
   "suma": 11.5,
-  "dienu_iki": 227
+  "dienu_iki": 220
  },
  "RI.PA": {
   "kita_ex": "2027-02-17",
   "suma": 2.35,
-  "dienu_iki": 143
+  "dienu_iki": 136
  },
  "RMS.PA": {
   "kita_ex": "2026-12-14",
   "suma": 13.0,
-  "dienu_iki": 78
+  "dienu_iki": 71
  },
  "RNO.PA": {
   "kita_ex": "2027-05-08",
   "suma": 2.2,
-  "dienu_iki": 223
+  "dienu_iki": 216
  },
  "ROVI.MC": {
   "kita_ex": "2027-07-12",
   "suma": 0.9594,
-  "dienu_iki": 288
+  "dienu_iki": 281
  },
  "RWE.DE": {
   "kita_ex": "2027-05-06",
   "suma": 1.2,
-  "dienu_iki": 221
+  "dienu_iki": 214
  },
  "RYA.IR": {
   "kita_ex": "2027-02-25",
   "suma": 0.195,
-  "dienu_iki": 151
+  "dienu_iki": 144
  },
  "SAB.MC": {
   "kita_ex": "2026-10-28",
   "suma": 0.5,
-  "dienu_iki": 31
+  "dienu_iki": 24
  },
  "SAF.PA": {
   "kita_ex": "2027-05-24",
   "suma": 3.35,
-  "dienu_iki": 239
+  "dienu_iki": 232
  },
  "SAN.MC": {
   "kita_ex": "2026-10-29",
   "suma": 0.125,
-  "dienu_iki": 32
+  "dienu_iki": 25
  },
  "SAN.PA": {
   "kita_ex": "2027-05-04",
   "suma": 4.12,
-  "dienu_iki": 219
+  "dienu_iki": 212
  },
  "SAP.DE": {
   "kita_ex": "2027-05-04",
   "suma": 2.5,
-  "dienu_iki": 219
+  "dienu_iki": 212
  },
  "SCR.PA": {
   "kita_ex": "2027-04-30",
   "suma": 1.9,
-  "dienu_iki": 215
+  "dienu_iki": 208
  },
  "SFER.MI": {
   "kita_ex": "2027-05-17",
   "suma": 0.1,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "SGO.PA": {
   "kita_ex": "2027-06-07",
   "suma": 2.3,
-  "dienu_iki": 253
+  "dienu_iki": 246
  },
  "SHL.DE": {
   "kita_ex": "2027-02-06",
   "suma": 1.0,
-  "dienu_iki": 132
+  "dienu_iki": 125
  },
  "SIE.DE": {
   "kita_ex": "2027-02-12",
   "suma": 5.35,
-  "dienu_iki": 138
+  "dienu_iki": 131
  },
  "SOF.BR": {
   "kita_ex": "2027-05-27",
   "suma": 3.66,
-  "dienu_iki": 242
+  "dienu_iki": 235
  },
  "SRG.MI": {
   "kita_ex": "2026-11-23",
   "suma": 0.1813,
-  "dienu_iki": 57
+  "dienu_iki": 50
  },
  "SRT3.DE": {
   "kita_ex": "2027-03-26",
   "suma": 0.74,
-  "dienu_iki": 180
+  "dienu_iki": 173
  },
  "STERV.HE": {
   "kita_ex": "2027-06-20",
   "suma": 0.12,
-  "dienu_iki": 266
+  "dienu_iki": 259
  },
  "STLAM.MI": {
   "kita_ex": "2027-04-20",
   "suma": 0.68,
-  "dienu_iki": 205
+  "dienu_iki": 198
  },
  "STMPA.PA": {
   "kita_ex": "2026-12-21",
-  "suma": 0.078939006,
-  "dienu_iki": 85
+  "suma": 0.079947,
+  "dienu_iki": 78
  },
  "SU.PA": {
   "kita_ex": "2027-05-14",
   "suma": 4.2,
-  "dienu_iki": 229
+  "dienu_iki": 222
  },
  "SW.PA": {
   "kita_ex": "2026-12-17",
   "suma": 2.7,
-  "dienu_iki": 81
+  "dienu_iki": 74
  },
  "SY1.DE": {
   "kita_ex": "2027-05-12",
   "suma": 1.25,
-  "dienu_iki": 227
+  "dienu_iki": 220
  },
  "TEF.MC": {
   "kita_ex": "2026-12-15",
   "suma": 0.15,
-  "dienu_iki": 79
+  "dienu_iki": 72
  },
  "TEG.DE": {
   "kita_ex": "2027-05-21",
   "suma": 0.4,
-  "dienu_iki": 236
+  "dienu_iki": 229
  },
  "TEP.PA": {
   "kita_ex": "2027-05-24",
   "suma": 4.5,
-  "dienu_iki": 239
+  "dienu_iki": 232
  },
  "TIT.MI": {
   "kita_ex": "2027-06-14",
   "suma": 0.1,
-  "dienu_iki": 260
+  "dienu_iki": 253
  },
  "TKA.DE": {
   "kita_ex": "2027-02-01",
   "suma": 0.15,
-  "dienu_iki": 127
+  "dienu_iki": 120
  },
  "TLX.DE": {
   "kita_ex": "2027-05-07",
   "suma": 3.6,
-  "dienu_iki": 222
+  "dienu_iki": 215
  },
  "TRN.MI": {
   "kita_ex": "2027-01-18",
   "suma": 0.277,
-  "dienu_iki": 113
+  "dienu_iki": 106
  },
  "TTE.PA": {
-  "kita_ex": "2026-09-29",
-  "suma": 0.85,
-  "dienu_iki": 2
+  "kita_ex": "2026-12-30",
+  "suma": 0.9,
+  "dienu_iki": 87
  },
  "TUI1.DE": {
   "kita_ex": "2027-02-10",
   "suma": 0.1,
-  "dienu_iki": 136
+  "dienu_iki": 129
  },
  "UCB.BR": {
   "kita_ex": "2027-05-03",
   "suma": 1.45,
-  "dienu_iki": 218
+  "dienu_iki": 211
  },
  "UCG.MI": {
   "kita_ex": "2027-03-22",
   "suma": 1.7208,
-  "dienu_iki": 176
+  "dienu_iki": 169
  },
  "UMI.BR": {
   "kita_ex": "2027-01-15",
   "suma": 0.5,
-  "dienu_iki": 110
+  "dienu_iki": 103
  },
  "UNI.MI": {
   "kita_ex": "2027-05-17",
   "suma": 1.12,
-  "dienu_iki": 232
+  "dienu_iki": 225
  },
  "UPM.HE": {
   "kita_ex": "2026-11-12",
   "suma": 0.75,
-  "dienu_iki": 46
+  "dienu_iki": 39
  },
  "URW.PA": {
   "kita_ex": "2027-05-15",
   "suma": 4.5,
-  "dienu_iki": 230
+  "dienu_iki": 223
  },
  "VER.VI": {
   "kita_ex": "2027-04-27",
   "suma": 3.15,
-  "dienu_iki": 212
+  "dienu_iki": 205
  },
  "VIE.PA": {
   "kita_ex": "2027-05-10",
   "suma": 1.5,
-  "dienu_iki": 225
+  "dienu_iki": 218
  },
  "VIV.PA": {
   "kita_ex": "2027-04-18",
   "suma": 0.04,
-  "dienu_iki": 203
+  "dienu_iki": 196
  },
  "VNA.DE": {
   "kita_ex": "2027-05-27",
   "suma": 1.25,
-  "dienu_iki": 242
+  "dienu_iki": 235
  },
  "VOW3.DE": {
   "kita_ex": "2027-05-23",
   "suma": 5.26,
-  "dienu_iki": 238
+  "dienu_iki": 231
  },
  "WCH.DE": {
   "kita_ex": "2027-05-02",
   "suma": 2.5,
-  "dienu_iki": 217
+  "dienu_iki": 210
  }
 }

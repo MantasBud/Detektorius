@@ -75,6 +75,20 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)
 .tuscia{color:var(--dim);padding:28px 4px;font-size:14px}
 footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
   border-top:1px solid var(--line);padding-top:14px}
+.skirt{display:flex;gap:4px;margin:12px 0 4px;border-bottom:1px solid var(--line)}
+.skirt button{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);
+  padding:8px 12px;font-size:14px;cursor:pointer;margin-bottom:-1px}
+.skirt button[aria-selected="true"]{color:var(--txt);border-bottom-color:var(--acc);font-weight:600}
+section[hidden]{display:none}
+.lent{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:14px}
+.lent table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.lent th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);
+  font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.lent td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.lent tr:last-child td{border-bottom:0}
+.lent td.sk,.lent th.sk{text-align:right}
+.apyt{color:var(--dim)}
+.pastaba{color:var(--dim);font-size:12px;margin-top:10px;line-height:1.5}
 @media (max-width:520px){.wrap{padding:16px 16px 48px}.tinkl{grid-template-columns:1fr}}
 </style>
 </head>
@@ -88,6 +102,12 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
   <div class="sub" id="laikmatis"></div>
 </header>
 
+<nav class="skirt" role="tablist">
+  <button id="sk-signalai-b" role="tab" aria-selected="true">Signalai</button>
+  <button id="sk-dividendai-b" role="tab" aria-selected="false">Dividendai</button>
+</nav>
+
+<section id="sk-signalai">
 <div class="zurnalas z" id="zurnalas" hidden></div>
 
 <div class="valdymas">
@@ -98,6 +118,11 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 </div>
 
 <div id="turinys"></div>
+</section>
+
+<section id="sk-dividendai" hidden>
+<div id="div-turinys"></div>
+</section>
 
 <footer>
   Pozicija 18&nbsp;000&nbsp;€. Sąnaudos: EU 10&nbsp;€ (lūžio taškas 0,0556&nbsp;%), JAV 5&nbsp;€ (0,0278&nbsp;%).
@@ -108,7 +133,7 @@ footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.6;
 </div>
 
 <script>
-const DUOM = {"atnaujinta": "2026-10-02T21:02:19.273112+00:00", "signalai": [{"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 42.040000915527344, "tikslas": 42.46525058746338, "stop": 41.61475124359131, "R": 42.46525058746338, "L": 41.08000183105469, "atr_abs": 0.8504993438720703, "progresas": 0.24803182717925767, "progresas_tikslus": true, "kritimas_atr": 2.7278089178316716, "atsiemimas_atr": 0.6937102971788263, "baru_nuo_dugno": 40, "nesekmes": 5, "silpnas_atsiemimas": false, "R_pilnas": 43.77000045776367, "tikslas_ribotas": true, "kelias_atr": 2.245739354384977, "sanaudos": 10.0, "rizika_pct": 1.011535829389033, "rizika_eur": 182.07644929002595, "rr": 1.0, "kliutys": [], "tinkamas": true, "pirmas_kartas": "2026-10-02 10:50:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 0.09341021245411474, "rinka": "EU", "tickeris": "ABN.AS", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 2.051868101851771, "amzius_min": 710, "dividendas": {"kita_ex": "2027-01-26", "suma": 0.68, "dienu_iki": 121}, "iki_ataskaitos": 40}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 170.0, "tikslas": 170.8800048828125, "stop": 168.69874992370606, "R": 170.8800048828125, "L": 166.44000244140625, "atr_abs": 2.602500152587891, "progresas": 0.8918894769399959, "progresas_tikslus": true, "kritimas_atr": 1.7060527112711874, "atsiemimas_atr": 1.3679144475952236, "baru_nuo_dugno": 101, "nesekmes": 0, "silpnas_atsiemimas": false, "R_pilnas": 170.8800048828125, "tikslas_ribotas": false, "kelias_atr": 0.18444225098346625, "sanaudos": 10.0, "rizika_pct": 0.7654412213493763, "rizika_eur": 137.77941984288773, "rr": 0.6762765273519304, "kliutys": ["judesys 0.52% \u003c 0.56%", "R:R 0.676 \u003c 1.0"], "tinkamas": false, "pirmas_kartas": "2026-10-02 11:25:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 1.4180223872940156, "rinka": "EU", "tickeris": "AI.PA", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 1.56362660082517, "amzius_min": 680, "dividendas": {"kita_ex": "2027-05-17", "suma": 3.363636, "dienu_iki": 232}, "iki_ataskaitos": 139}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 56.31999969482422, "tikslas": 56.86000061035156, "stop": 55.74374942779541, "R": 56.86000061035156, "L": 55.439998626708984, "atr_abs": 1.152500534057617, "progresas": 0.8028180365082137, "progresas_tikslus": true, "kritimas_atr": 1.2321052716940326, "atsiemimas_atr": 0.7635580566865406, "baru_nuo_dugno": 93, "nesekmes": 0, "silpnas_atsiemimas": false, "R_pilnas": 56.86000061035156, "tikslas_ribotas": false, "kelias_atr": 0.24294893670121023, "sanaudos": 10.0, "rizika_pct": 1.0231716444447505, "rizika_eur": 184.17089600005508, "rr": 0.9370944300149794, "kliutys": ["R:R 0.937 \u003c 1.0"], "tinkamas": false, "pirmas_kartas": "2026-10-02 10:45:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 0.6007866921935778, "rinka": "EU", "tickeris": "AKZA.AS", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 2.0788249686254217, "amzius_min": 720, "dividendas": {"kita_ex": "2026-10-26", "suma": 1.54, "dienu_iki": 29}, "iki_ataskaitos": 19}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 10.260000228881836, "tikslas": 10.373000264167786, "stop": 10.147000193595886, "R": 10.373000264167786, "L": 10.079999923706055, "atr_abs": 0.22600007057189941, "progresas": 0.37500024835242995, "progresas_tikslus": true, "kritimas_atr": 1.5929225572389027, "atsiemimas_atr": 0.265488499471998, "baru_nuo_dugno": 55, "nesekmes": 5, "silpnas_atsiemimas": false, "R_pilnas": 10.5600004196167, "tikslas_ribotas": true, "kelias_atr": 1.3274340577669048, "sanaudos": 10.0, "rizika_pct": 1.101364841765357, "rizika_eur": 198.24567151776426, "rr": 1.0, "kliutys": ["apyvarta 1.1 mln \u003c 1.8"], "tinkamas": false, "pirmas_kartas": "2026-10-02 14:15:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 0.3509229806269887, "rinka": "EU", "tickeris": "ALM.MC", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 2.215687007823402, "amzius_min": 505, "dividendas": {"kita_ex": "2027-05-13", "suma": 0.187, "dienu_iki": 228}, "iki_ataskaitos": 38}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 294.3999938964844, "tikslas": 297.36624374389646, "stop": 291.4337440490723, "R": 297.36624374389646, "L": 292.25, "atr_abs": 5.932499694824219, "progresas": 0.3677427230342742, "progresas_tikslus": true, "kritimas_atr": 1.3063633204669949, "atsiemimas_atr": 0.3624094407219485, "baru_nuo_dugno": 42, "nesekmes": 0, "silpnas_atsiemimas": false, "R_pilnas": 300.0, "tikslas_ribotas": true, "kelias_atr": 0.825957715726366, "sanaudos": 10.0, "rizika_pct": 1.007557713623821, "rizika_eur": 181.3603884522878, "rr": 1.0, "kliutys": [], "tinkamas": true, "pirmas_kartas": "2026-10-02 11:05:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": -0.06077912737155744, "rinka": "EU", "tickeris": "APC.DE", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 2.0299400153376284, "amzius_min": 695, "dividendas": {"kita_ex": "2026-11-09", "suma": 0.236817, "dienu_iki": 43}, "iki_ataskaitos": 27}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 45.29999923706055, "tikslas": 45.7634991645813, "stop": 44.836499309539796, "R": 45.7634991645813, "L": 44.720001220703125, "atr_abs": 0.926999855041504, "progresas": 0.4864874617563593, "progresas_tikslus": true, "kritimas_atr": 1.4886704090759357, "atsiemimas_atr": 0.45307252925784786, "baru_nuo_dugno": 61, "nesekmes": 2, "silpnas_atsiemimas": false, "R_pilnas": 46.2599983215332, "tikslas_ribotas": true, "kelias_atr": 0.8198472927476091, "sanaudos": 10.0, "rizika_pct": 1.0231786651809807, "rizika_eur": 184.17215973257652, "rr": 1.0, "kliutys": [], "tinkamas": true, "pirmas_kartas": "2026-10-02 10:50:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 0.22878425177595973, "rinka": "EU", "tickeris": "LEG.DE", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 2.0655076492413147, "amzius_min": 710, "dividendas": {"kita_ex": "2027-05-27", "suma": 2.92, "dienu_iki": 242}, "iki_ataskaitos": 41}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 4.176000118255615, "tikslas": 4.2159001469612125, "stop": 4.136100089550018, "R": 4.2159001469612125, "L": 4.138000011444092, "atr_abs": 0.07980005741119385, "progresas": 0.16504827401027283, "progresas_tikslus": true, "kritimas_atr": 2.5313222929875407, "atsiemimas_atr": 0.4260638525128195, "baru_nuo_dugno": 97, "nesekmes": 2, "silpnas_atsiemimas": false, "R_pilnas": 4.343999862670898, "tikslas_ribotas": true, "kelias_atr": 2.1553860600521593, "sanaudos": 10.0, "rizika_pct": 0.9554604304528657, "rizika_eur": 171.98287748151583, "rr": 1.0, "kliutys": [], "tinkamas": true, "pirmas_kartas": "2026-10-02 10:50:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 0.14366530875239425, "rinka": "EU", "tickeris": "MAP.MC", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 1.9266067983943642, "amzius_min": 710, "dividendas": {"kita_ex": "2026-11-24", "suma": 0.110372, "dienu_iki": 58}, "iki_ataskaitos": 27}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 11.90999984741211, "tikslas": 12.052999877929688, "stop": 11.766999816894531, "R": 12.052999877929688, "L": 11.789999961853027, "atr_abs": 0.28600006103515624, "progresas": 0.6808500276971213, "progresas_tikslus": true, "kritimas_atr": 1.538463077473017, "atsiemimas_atr": 0.3146857810524294, "baru_nuo_dugno": 101, "nesekmes": 2, "silpnas_atsiemimas": false, "R_pilnas": 12.260000228881836, "tikslas_ribotas": true, "kelias_atr": 0.5244774132623391, "sanaudos": 10.0, "rizika_pct": 1.2006719760676619, "rizika_eur": 216.1209556921791, "rr": 1.0, "kliutys": [], "tinkamas": true, "pirmas_kartas": "2026-10-02 10:30:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 2.1921832124299656, "rinka": "EU", "tickeris": "MRL.MC", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 2.41962832842027, "amzius_min": 730, "dividendas": {"kita_ex": "2026-10-29", "suma": 0.0151, "dienu_iki": 32}, "iki_ataskaitos": 41}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 165.36000061035156, "tikslas": 168.90650062561036, "stop": 161.81350059509276, "R": 168.90650062561036, "L": 162.74000549316406, "atr_abs": 7.093000030517578, "progresas": 0.22988464307951043, "progresas_tikslus": true, "kritimas_atr": 2.12885813897631, "atsiemimas_atr": 0.29042683627951876, "baru_nuo_dugno": 41, "nesekmes": 0, "silpnas_atsiemimas": false, "R_pilnas": 178.39999389648438, "tikslas_ribotas": true, "kelias_atr": 1.700267518215946, "sanaudos": 10.0, "rizika_pct": 2.1447145634787743, "rizika_eur": 386.0486214261794, "rr": 1.0, "kliutys": ["apyvarta 0.6 mln \u003c 1.8"], "tinkamas": false, "pirmas_kartas": "2026-10-02 14:35:00+02:00", "rinkos_pokytis": 0.29527296674942693, "platumas": 55.980861244019145, "plat_d30": -8.375574399545208, "santykinis": 1.8917264098880615, "rinka": "EU", "tickeris": "QCI.DE", "laikas": "2026-10-02 17:20:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 4.343539435372488, "amzius_min": 465, "dividendas": {"kita_ex": "2026-12-03", "suma": 0.80693203, "dienu_iki": 67}, "iki_ataskaitos": 33}, {"scenarijus": "Atsistatymas", "tipas": 1, "ieina": 253.39999389648438, "tikslas": 257.42249336242674, "stop": 249.377494430542, "R": 257.42249336242674, "L": 247.0, "atr_abs": 8.044998931884766, "progresas": 0.3454543604995265, "progresas_tikslus": true, "kritimas_atr": 1.5537603057296523, "atsiemimas_atr": 0.29832122002806893, "baru_nuo_dugno": 101, "nesekmes": 1, "silpnas_atsiemimas": false, "R_pilnas": 263.5, "tikslas_ribotas": true, "kelias_atr": 1.3424492834864317, "sanaudos": 10.0, "rizika_pct": 1.5874110350553547, "rizika_eur": 285.7339863099639, "rr": 0.9999999999999929, "kliutys": [], "tinkamas": true, "pirmas_kartas": "2026-10-02 10:50:00+02:00", "rinkos_pokytis": 0.4349308632612181, "platumas": 57.692307692307686, "plat_d30": -7.013574660633488, "santykinis": 1.0102681558148974, "rinka": "EU", "tickeris": "SRT3.DE", "laikas": "2026-10-02 17:25:00+02:00", "sesija_data": "2026-10-02", "atr_pct": 3.205178857324608, "amzius_min": 710, "dividendas": {"kita_ex": "2027-03-26", "suma": 0.74, "dienu_iki": 180}, "iki_ataskaitos": -72}], "zurnalas": {"signalu": 107, "atviru": 35, "baigtu": 72, "tikslo_dalis": 41.666666666666664, "vid_eur": -45.65277777777781}};
+const DUOM = {"atnaujinta": "2026-10-04T19:20:02.566272+00:00", "signalai": [], "zurnalas": {"signalu": 107, "atviru": 35, "baigtu": 72, "tikslo_dalis": 41.666666666666664, "vid_eur": -45.65277777777781}, "dividendai": null};
 const B = {visi:false, tinkami:true, EU:true, JAV:true};
 let duom = DUOM;
 
@@ -230,8 +255,58 @@ setInterval(()=>{
     'atnaujinimas po ' + Math.floor(liko/60) + ':' + String(Math.max(0,liko)%60).padStart(2,'0');
 }, 1000);
 
+function data_md(x){ return x ? String(x).slice(5) : '–'; }   // "2026-10-15" -> "10-15"
+
+function dividendai(){
+  const el = document.getElementById('div-turinys');
+  const d = DUOM.dividendai;
+  if (!d || !d.eilutes){
+    el.innerHTML = '<div class="tuscia">Dividendų duomenų dar nėra (atnaujinami kartą per dieną).</div>';
+    return;
+  }
+  const e = d.eilutes;
+  const t = d.atnaujinta ? new Date(d.atnaujinta) : null;
+  let h = `<div class="sub" style="margin-top:12px">Paskelbti dividendai su ex-data per ${d.langas_d||30} d. · ${e.length} akcijų`
+        + (t ? ' · atnaujinta ' + t.toLocaleDateString('lt-LT') : '') + '</div>';
+  if (!e.length){
+    el.innerHTML = h + '<div class="tuscia">Per artimiausias dienas paskelbtų dividendų nėra.</div>';
+    return;
+  }
+  h += `<div class="lent"><table><thead><tr>
+      <th>Akcija</th><th class="sk">Kaina €</th><th class="sk">Dividendas €/akc.</th>
+      <th>Ex-data</th><th>Fiksavimo d.</th><th>Mokėjimo d.</th></tr></thead><tbody>`;
+  for (const r of e){
+    const pj = (r.pajamingumas!==null && r.pajamingumas!==undefined) ? ` <span class="apyt">(${nr(r.pajamingumas,2)}%)</span>` : '';
+    h += `<tr>
+      <td><span class="tick" style="font-size:14px">${esc(r.tikeris)}</span>
+        <span class="zenk ${esc(r.rinka)}">${esc(r.rinka)}</span></td>
+      <td class="sk">${nr(r.kaina_eur)}</td>
+      <td class="sk">${r.suma_apytiksle?'<span class="apyt">~</span>':''}${nr(r.div_eur,3)}${pj}</td>
+      <td>${data_md(r.ex)}</td>
+      <td>${r.irasymo_apytiksle?'<span class="apyt">~</span>':''}${data_md(r.irasymo)}</td>
+      <td>${data_md(r.mokejimo)}</td></tr>`;
+  }
+  h += '</tbody></table></div>';
+  h += `<div class="pastaba">Dividendą gauna tas, kas akciją turi <b>prieš ex-datą</b> (pirkti vėliausiai dieną prieš ją).
+    „~" – apytiksliai: fiksavimo d. apskaičiuota (JAV = ex-data, EU = ex-data + 1 d. d.), arba suma – paskutinio išmokėto dividendo (Milano akcijos, Yahoo).
+    JAV sumos ir kainos perskaičiuotos į EUR. Šaltinis: EODHD.</div>`;
+  el.innerHTML = h;
+}
+
+function skirtukas(kuris){
+  for (const k of ['signalai','dividendai']){
+    document.getElementById('sk-'+k).hidden = (k !== kuris);
+    document.getElementById('sk-'+k+'-b').setAttribute('aria-selected', k === kuris);
+  }
+  try { history.replaceState(null, '', kuris === 'dividendai' ? '#dividendai' : location.pathname); } catch(e){}
+}
+document.getElementById('sk-signalai-b').addEventListener('click', ()=>skirtukas('signalai'));
+document.getElementById('sk-dividendai-b').addEventListener('click', ()=>skirtukas('dividendai'));
+
 piesti();
 zurnalas(DUOM.zurnalas);
+dividendai();
+if (location.hash === '#dividendai') skirtukas('dividendai');
 </script>
 </body>
 </html>
