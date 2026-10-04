@@ -45,7 +45,7 @@ LANGAS_MEN = 6                       # uzklausos langas (menesiai) - kad offset 
 APLANKAS = "naujienos"
 SAUGIKLIS = 85000
 PAVYZDZIAI = ["RHM.DE", "MC.PA", "SAP.DE", "ASML.AS", "SIE.DE", "AIR.PA", "AAPL", "NVDA"]
-SRAUTAI = 4
+SRAUTAI = 8
 
 
 def variantai(yahoo):
@@ -128,7 +128,7 @@ def _tikeriui(args):
                 klaidos=sorted(set(klaidos)))
 
 
-def paleisti(tik=None):
+def paleisti(tik=None, rinka=None):
     token = os.environ.get("EODHD_TOKEN", "").strip()
     if not token:
         sys.exit("KLAIDA: EODHD_TOKEN nenustatytas")
@@ -138,6 +138,10 @@ def paleisti(tik=None):
     if tik:
         eu = [t for t in PAVYZDZIAI if "." in t] + [t for t in eu if t not in PAVYZDZIAI][:tik]
         us = [t for t in PAVYZDZIAI if "." not in t] + [t for t in us if t not in PAVYZDZIAI][:tik]
+    if rinka == "eu":
+        us = []
+    elif rinka == "us":
+        eu = []
     sar = list(dict.fromkeys(eu + us))
     os.makedirs(APLANKAS, exist_ok=True)
     iki = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -225,5 +229,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--savitikra", action="store_true")
     ap.add_argument("--tik", type=int, default=None)
+    ap.add_argument("--rinka", choices=["eu", "us"], default=None)
     a = ap.parse_args()
-    sys.exit(savitikra() if a.savitikra else paleisti(a.tik))
+    sys.exit(savitikra() if a.savitikra else paleisti(a.tik, a.rinka))
