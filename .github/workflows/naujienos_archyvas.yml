@@ -1,7 +1,7 @@
 name: EODHD naujienos (archyvas ir padengimas)
 
-# EODHD plano 3 zingsnis. Parsisiuncia naujienas nuo 2020-10 visam universui
-# (EU: biržos simbolis + .F; JAV: .US) ir parodo padengima.
+# EODHD plano 3 zingsnis. Naujienos nuo 2020-10 visam universui
+# (EU: biržos simbolis + .F; JAV: .US). EU ir JAV - du lygiagretus darbai.
 # Raktas is GitHub Secret EODHD_TOKEN, niekur nespausdinamas. Repo failu nekeicia.
 
 on:
@@ -18,7 +18,11 @@ permissions:
 jobs:
   naujienos:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        rinka: [eu, us]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,18 +40,19 @@ jobs:
           EODHD_TOKEN: ${{ secrets.EODHD_TOKEN }}
           TIK: ${{ github.event.inputs.tik }}
         run: |
-          if [ -n "$TIK" ]; then python naujienos_archyvas.py --tik "$TIK"; else python naujienos_archyvas.py; fi
+          if [ -n "$TIK" ]; then python naujienos_archyvas.py --rinka ${{ matrix.rinka }} --tik "$TIK"; else python naujienos_archyvas.py --rinka ${{ matrix.rinka }}; fi
 
       - name: Supakavimas
+        if: always()
         run: |
-          tar -cf eodhd_naujienos.tar naujienos
-          ls -lh eodhd_naujienos.tar
+          tar -cf eodhd_naujienos_${{ matrix.rinka }}.tar naujienos || true
+          ls -lh eodhd_naujienos_*.tar
 
       - name: Release
-        if: ${{ github.event.inputs.tik == '' }}
+        if: ${{ always() && github.event.inputs.tik == '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "naujienos-${{ github.run_number }}" eodhd_naujienos.tar \
-            --title "EODHD naujienos $(date -u +%Y-%m-%d)" \
-            --notes "Naujienos nuo 2020-10 (EODHD), EU: biržos simbolis + .F, JAV: .US. Formatas: naujienos/<tikeris>.jsonl.gz."
+          gh release create "naujienos-${{ matrix.rinka }}-${{ github.run_number }}" eodhd_naujienos_${{ matrix.rinka }}.tar \
+            --title "EODHD naujienos ${{ matrix.rinka }} $(date -u +%Y-%m-%d)" \
+            --notes "Naujienos nuo 2020-10 (EODHD). Formatas: naujienos/<tikeris>.jsonl.gz."
