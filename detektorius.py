@@ -242,7 +242,9 @@ PERZIUROS_ZYME = "B"
 # Puslapio statistika skaiciuojama nuo sios sesijos. Iki 2026-09-29 korteles
 # vėluodavo 15-20 min (GitHub planuoklis), todel ju rezultatai neatspindi
 # dabartinio detektoriaus (ciklas kas 5 min). Senos eilutes zurnale lieka.
-PUSLAPIO_PRADZIA = "2026-09-30"
+# 2026-10-06: pradzia pastumta po 6 AI auditu pataisymu (S2 slenkancio stop'o
+# tvarka bare, pirmas tinkamas signalas gyvai). Zurnalas nekeiciamas.
+PUSLAPIO_PRADZIA = "2026-10-06"
 DIVIDENDU_TALPYKLA = "dividendai.json"
 
 # --- scenarijus 1: kritimas ir apsisukimas ---
@@ -3431,7 +3433,7 @@ def savitikra():
     st5 = zurnalo_santrauka({
         "a": dict(tinkamas=True, tipas="1", baigtis="stop", eur=-300.0, sesija="2026-09-29"),
         "b": dict(tinkamas=True, tipas="1", baigtis="tikslas", eur=170.0, sesija=PUSLAPIO_PRADZIA),
-        "c": dict(tinkamas=True, tipas="1", baigtis="", eur="", sesija="2026-10-01")})
+        "c": dict(tinkamas=True, tipas="1", baigtis="", eur="", sesija=PUSLAPIO_PRADZIA)})
     # juosta turi likti matoma ir tada, kai nuo PUSLAPIO_PRADZIA dar nieko nera
     # (2026-09-29 ji dingdavo, nes JS slepe juosta prie 0 signalu)
     tikrinti("puslapis: zurnalo juosta neslepiama prie 0 signalu",
