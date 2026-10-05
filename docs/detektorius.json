@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-05T20:06:52.481824+00:00",
+ "atnaujinta": "2026-10-05T20:11:53.295215+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -36,7 +36,7 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 2.504641392236322,
-   "amzius_min": 699,
+   "amzius_min": 704,
    "dividendas": {
     "kita_ex": "2027-05-24",
     "suma": 3.6,
@@ -79,7 +79,7 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 2.0815601754695807,
-   "amzius_min": 640,
+   "amzius_min": 645,
    "dividendas": {
     "kita_ex": "2027-05-16",
     "suma": 4.78,
@@ -122,7 +122,7 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 2.213334083557129,
-   "amzius_min": 285,
+   "amzius_min": 290,
    "dividendas": {
     "kita_ex": "2026-12-22",
     "suma": 1.92,
@@ -165,7 +165,7 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 2.06858331892825,
-   "amzius_min": 699,
+   "amzius_min": 704,
    "dividendas": {
     "kita_ex": "2026-11-16",
     "suma": 0.19,
@@ -208,7 +208,7 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 2.846443184775396,
-   "amzius_min": 699,
+   "amzius_min": 704,
    "dividendas": {
     "kita_ex": "2027-04-19",
     "suma": 3.5,
@@ -251,7 +251,7 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 2.3070956176984194,
-   "amzius_min": 699,
+   "amzius_min": 704,
    "dividendas": {
     "kita_ex": "2027-05-17",
     "suma": 1.12,
@@ -294,13 +294,52 @@
    "laikas": "2026-10-05 17:25:00+02:00",
    "sesija_data": "2026-10-05",
    "atr_pct": 3.6084778759441063,
-   "amzius_min": 685,
+   "amzius_min": 690,
    "dividendas": {
     "kita_ex": "2027-05-23",
     "suma": 5.26,
     "dienu_iki": 231
    },
    "iki_ataskaitos": -74
+  },
+  {
+   "scenarijus": "Atsistatymas",
+   "tipas": 1,
+   "ieina": 86.16999816894531,
+   "tikslas": 86.75649814605713,
+   "stop": 85.5834981918335,
+   "R": 86.75649814605713,
+   "L": 85.12999725341797,
+   "atr_abs": 1.172999954223633,
+   "progresas": 0.6779507104630478,
+   "progresas_tikslus": true,
+   "kritimas_atr": 1.304346836321513,
+   "atsiemimas_atr": 0.44330491334978234,
+   "baru_nuo_dugno": 72,
+   "nesekmes": 0,
+   "silpnas_atsiemimas": false,
+   "R_pilnas": 87.18000030517578,
+   "tikslas_ribotas": true,
+   "kelias_atr": 0.8013661364790114,
+   "sanaudos": 5.0,
+   "rizika_pct": 0.6806312981020597,
+   "rizika_eur": 122.51363365837074,
+   "rr": 1.0,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-10-05 11:35:00-04:00",
+   "rinkos_pokytis": 0.12460593707839251,
+   "platumas": 57.74647887323944,
+   "plat_d30": -4.225352112676049,
+   "santykinis": 0.6321141181709677,
+   "rinka": "JAV",
+   "tickeris": "KO",
+   "laikas": "2026-10-05 15:50:00-04:00",
+   "sesija_data": "2026-10-05",
+   "atr_pct": 1.3695270675146622,
+   "amzius_min": 270,
+   "dividendas": null,
+   "iki_ataskaitos": 22
   }
  ]
 }
