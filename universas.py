@@ -42,8 +42,10 @@ UNIVERSAS = {
     ],
     "Pramone": [
         "SIE.DE", "KGX.DE", "LR.PA", "PRY.MI", "NEX.PA", "ENR.DE", "VIE.PA",
-        "BNR.DE", "DUE.DE", "KRZ.IR", "IFX.DE", "ZAL.DE", "NDA.DE",
-        "AIXA.DE", "JUN3.DE", "RAA.DE", "PUM.DE", "WCH.DE", "SRT3.DE",
+        "BNR.DE", "DUE.DE", "KRZ.IR", "NDA.DE",
+        "JUN3.DE", "RAA.DE", "WCH.DE", "SRT3.DE",
+        # 2026-10-05: IFX, AIXA (Technologijos), ZAL (Logistika ir mazmena),
+        # PUM (Vartojimas ir prabanga) buvo ir cia - vienas sektorius akcijai
     ],
     "Gynyba ir aviacija": [
         "RHM.DE", "LDO.MI", "HO.PA", "AIR.PA", "SAF.PA", "MTX.DE", "AM.PA",
@@ -56,7 +58,7 @@ UNIVERSAS = {
     "Bankai ir finansai": [
         "BNP.PA", "ACA.PA", "GLE.PA", "DBK.DE", "CBK.DE", "UCG.MI", "ISP.MI",
         "SAN.MC", "BBVA.MC", "CABK.MC", "INGA.AS", "ABN.AS", "KBC.BR", "BAMI.MI",
-        "BPE.MI", "SAB.MC", "UNI.MI", "BIRG.IR", "DBAN.DE",
+        "BPE.MI", "SAB.MC", "BIRG.IR", "DBAN.DE",   # UNI.MI - Draudimas (2026-10-05)
     ],
     "Draudimas": [
         "ALV.DE", "CS.PA", "MUV2.DE", "HNR1.DE", "G.MI", "NN.AS", "AGN.AS",
@@ -81,7 +83,7 @@ UNIVERSAS = {
         "CPR.MI", "SFER.MI", "RI.PA", "OR.PA",
     ],
     "Maistas ir kasdienes prekes": [
-        "ABI.BR", "HEIA.AS", "BN.PA", "AD.AS", "CA.PA", "LDO.MI", "BEI.DE", "HEN3.DE", "SW.PA", "VIV.PA", "COLR.BR",
+        "ABI.BR", "HEIA.AS", "BN.PA", "AD.AS", "CA.PA", "BEI.DE", "HEN3.DE", "SW.PA", "VIV.PA", "COLR.BR",
     ],
     "Telekomai ir ziniasklaida": [
         "DTE.DE", "ORA.PA", "TEF.MC", "TIT.MI", "KPN.AS", "PUB.PA", "PROX.BR",
@@ -102,7 +104,7 @@ UNIVERSAS = {
     "JAV antriniai listingai": [
         "NVD.DE", "AMD.DE", "APC.DE", "MSF.DE", "ABEA.DE", "AMZ.DE", "TL0.DE",
         "FB2A.DE", "NFC.DE", "IBM.DE", "INL.DE", "QCI.DE", "AVG.DE",
-        "MUB.DE", "AMD.DE",
+        "MUB.DE",
     ],
     # Zaliavos (4GLD.DE, XAD6.DE, 8PSB.DE) ISIMTOS 2026-10-03: tai fondai, ne
     # bendroves - jie negali daryti bendroves kritimo ir atsistatymo (Manto
