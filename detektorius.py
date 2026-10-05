@@ -914,7 +914,18 @@ def baigtis(toliau, sig):
         # 13% baigciu skirdavosi, ir jos patekdavo i "stop" stulpeli.)
         if sig.get("tipas") == 2 and hi > auksciausia:
             auksciausia = hi
-            stop = max(stop, auksciausia - S2_TRAIL_ATR * atr)
+            naujas = max(stop, auksciausia - S2_TRAIL_ATR * atr)
+            # KONSERVATYVU (2026-10-05, 6 AI auditai): 5 min bare nezinome,
+            # ar High buvo pries Low. Jei baras pakele stop'a ir to paties
+            # baro Low ji pasieke - laikom, kad isejo ties nauju stop'u.
+            # Anksciau naujas stop'as galiojo tik nuo kito baro (6 m.: 32
+            # sandoriai is 1915 buvo vertinami per palankiai).
+            if naujas > stop and lo <= naujas:
+                return dict(baigtis="stop", pelnas_pct=(naujas / ieina - 1) * 100,
+                            minuciu=(j + 1) * BARAS_MIN, mfe_pct=mfe, mae_pct=mae,
+                            mfe_min=mfe_i * BARAS_MIN, laikas_baige=False,
+                            isejo_bare=j + 1)
+            stop = naujas
 
     gal = float(toliau["Close"].iloc[-1])
     return dict(baigtis="laikas", pelnas_pct=(gal / ieina - 1) * 100,
@@ -1525,6 +1536,12 @@ def zurnalas_atnaujinti(eilutes, barai_pagal_rakta, perziura=()):
                e, "kortele") for e in eilutes]
              + [(e["_raktas"], e, "baru perziura") for e in perziura])
     for raktas, e, saltinis in nauji:
+        if (raktas in z and saltinis == "kortele" and bool(e["tinkamas"])
+                and not _tinkama(z[raktas]) and not str(z[raktas].get("baigtis") or "")
+                and str(z[raktas].get("saltinis") or "") == "kortele"):
+            # pirmas kandidatas buvo netinkamas, dabar - tinkamas: eilute
+            # perrasoma nauju (pirmu tinkamu) signalu, kaip kalibracijoje
+            del z[raktas]
         if raktas not in z:
             z[raktas] = dict(
                 raktas=raktas, gimimas=e["laikas"], rinka=e["rinka"],
@@ -1694,6 +1711,21 @@ def _zurnalo_irasyti(z):
     print(f"  zurnalas: {len(z)} eiluciu ({atviros} atviros)")
 
 
+def busenos_sena(busena, raktas, s):
+    """Kokia issaugota busena taikoma siam kandidatui (None - naujas signalas).
+
+    Kaip kalibracijoje: dienos signala fiksuoja PIRMAS TINKAMAS kandidatas.
+    Iki 2026-10-05 busena fiksuodavo pirma bet koki, tad veliau atsirades
+    tinkamas gaudavo sena (netinkama) iejima ir kortele netapdavo (6 m.:
+    ~0.9 % sesiju). Senuose irasuose rakto "tinkamas" nera - jie laikomi
+    tinkamais, t. y. ju elgsena nesikeicia.
+    """
+    sena = busena.get(raktas)
+    if sena and not sena.get("tinkamas", True) and s.get("tinkamas"):
+        return None
+    return sena
+
+
 def atkurti(s, sena, kd, kaina, rinka="eu"):
     """Atstato signala is busenos ir PERSKAICIUOJA viska, kas nuo jos priklauso.
 
@@ -1856,7 +1888,7 @@ def paleisti_live(rinkos):
             for s in aptikti(det, kd, iki, rinka):
                 raktas = f"{zyme}|{t}|{s['tipas']}|{ses}"
                 dabar = str(det.index[-1])
-                sena = busena.get(raktas)
+                sena = busenos_sena(busena, raktas, s)
                 if sena:
                     atkurti(s, sena, kd, float(sesija["Close"].iloc[-1]), rinka)
                 else:
@@ -1864,7 +1896,8 @@ def paleisti_live(rinkos):
                                           R_pilnas=s.get("R_pilnas"),
                                           atsiemimas_atr=s.get("atsiemimas_atr"),
                                           ieina=s["ieina"], laikas=dabar,
-                                          laikas_utc=dabar_utc)
+                                          laikas_utc=dabar_utc,
+                                          tinkamas=bool(s["tinkamas"]))
                     s["pirmas_kartas"] = dabar
                 # AMZIUS skaiciuojamas sieniniu laikrodziu, ne baru laiku.
                 # Baru laiku jis sustodavo, kai rinka uzsidarydavo: penktadieni
@@ -2718,7 +2751,7 @@ def savitikra():
     # SL platus stop'as: rizikos riba prisisotinusi, tad kortelės stop'as (99.0)
     # yra AUKSCIAU uz struktūrini (97.4). Barai nukrenta iki 98.5 - kortele
     # issimuse, SL turi islikti.
-    plat = bb([[100.0, 100.4, 98.5, 99.0], [99.0, 101.0, 98.9, 100.8],
+    plat = bb([[100.0, 100.4, 98.5, 99.0], [99.0, 101.0, 99.2, 100.8],
                [100.8, 101.6, 100.4, 101.4]])
     sp = dict(tipas=1, ieina=100.0, tikslas=101.0, stop=99.0, atr_abs=2.0,
               L=98.0, R=101.0, R_pilnas=140.0)
@@ -2778,6 +2811,54 @@ def savitikra():
                  '<section id="sk-signalai">' in hp2 and '<section id="sk-dividendai" hidden>' in hp2, True)
         tikrinti("dividendai: signalai puslapyje nepakito",
                  hp2.split("const DUOM = ")[1].count('"tickeris"'), 1)
+
+    # --- S2 slenkantis stop'as: konservatyvi tvarka viename bare (2026-10-05)
+    s2k = dict(tipas=2, ieina=100.0, tikslas=None, stop=97.0, atr_abs=2.0)
+    vienas = bb([[100, 104, 101.5, 103.5], [103.5, 104, 103, 103.8]])
+    b2k = baigtis(vienas, s2k)
+    tikrinti("S2: baras pakele stop'a iki 102, to paties baro Low 101.5 -> isejimas 102",
+             (b2k["baigtis"], round(b2k["pelnas_pct"], 4), b2k["isejo_bare"]), ("stop", 2.0, 1))
+    nelieciant = bb([[100, 104, 102.1, 103.5], [103.5, 103.8, 102.5, 103]])
+    tikrinti("S2: Low virs naujo stop'o -> pozicija islieka iki laiko",
+             baigtis(nelieciant, s2k)["baigtis"], "laikas")
+    tikrinti("S1 (fiksuotas stop'as) nuo pakeitimo nepriklauso",
+             baigtis(vienas, dict(s2k, tipas=1, tikslas=110.0))["baigtis"], "laikas")
+
+    # --- live busena: netinkamas pirmas kandidatas nebeuzrakina dienos
+    bus = {"k": dict(ieina=100.0, tinkamas=False), "s": dict(ieina=99.0), "t": dict(ieina=98.0, tinkamas=True)}
+    tikrinti("busena: netinkama sena + tinkamas dabar -> naujas signalas",
+             busenos_sena(bus, "k", dict(tinkamas=True)), None)
+    tikrinti("busena: netinkama sena + netinkamas dabar -> sena (kaip anksciau)",
+             busenos_sena(bus, "k", dict(tinkamas=False))["ieina"], 100.0)
+    tikrinti("busena: senas irasas be 'tinkamas' -> sena (elgsena nepakito)",
+             busenos_sena(bus, "s", dict(tinkamas=True))["ieina"], 99.0)
+    tikrinti("busena: tinkama sena -> sena", busenos_sena(bus, "t", dict(tinkamas=True))["ieina"], 98.0)
+    tikrinti("busena: nera iraso -> None", busenos_sena(bus, "x", dict(tinkamas=True)), None)
+
+    # --- zurnalas: atvira NETINKAMA kortele keiciama veliau atsiradusiu tinkamu
+    import tempfile as _tf
+    sena_z = globals()["ZURNALAS"]
+    with _tf.TemporaryDirectory() as td:
+        globals()["ZURNALAS"] = os.path.join(td, "z.csv")
+        try:
+            e0 = dict(rinka="EU", tickeris="X.DE", tipas=1, sesija_data="2026-10-05",
+                      laikas="2026-10-05 10:00", scenarijus="Atsistatymas", ieina=100.0,
+                      tikslas=100.4, stop=99.5, rr=0.8, rizika_eur=90.0, atr_pct=1.0,
+                      atr_abs=1.0, tinkamas=False, kliutys=["R:R 0.8 < 1.0"])
+            zurnalas_atnaujinti([e0], {})
+            e1 = dict(e0, laikas="2026-10-05 10:30", ieina=101.0, tikslas=101.5, stop=100.5,
+                      rr=1.0, tinkamas=True, kliutys=[])
+            zurnalas_atnaujinti([e1], {})
+            zz = zurnalas_ikelti()
+            r_ = zz["EU|X.DE|1|2026-10-05"]
+            tikrinti("zurnalas: netinkama atvira eilute pakeista pirmu tinkamu",
+                     (_tinkama(r_), float(r_["ieina"]), r_["gimimas"]), (True, 101.0, "2026-10-05 10:30"))
+            e2 = dict(e1, laikas="2026-10-05 11:00", ieina=105.0)
+            zurnalas_atnaujinti([e2], {})
+            tikrinti("zurnalas: tinkama eilute veliau NEperrasoma",
+                     float(zurnalas_ikelti()["EU|X.DE|1|2026-10-05"]["ieina"]), 101.0)
+        finally:
+            globals()["ZURNALAS"] = sena_z
 
     tuscias = pd.DataFrame()
     variantu_lentele(tuscias)                      # neturi luzti
@@ -3288,7 +3369,7 @@ def savitikra():
     def _zb(bars):
         i = pd.date_range("2026-07-24 10:00", periods=len(bars), freq="5min")
         return pd.DataFrame(bars, columns=["Open", "High", "Low", "Close"], index=i)
-    kyla_krenta = _zb([[100, 104, 100, 104], [104, 106, 104, 106], [106, 106, 103, 103]])
+    kyla_krenta = _zb([[100, 104, 102.5, 104], [104, 106, 104.5, 106], [106, 106, 103, 103]])
     r2 = dict(sesija="2026-07-24", sanaudos="10.0")
     _zurnalo_eilute(r2, kyla_krenta, dict(tipas=2, ieina=100.0, tikslas=None,
                                           stop=97.0, atr_abs=2.0), "dabar")
