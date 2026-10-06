@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-06T19:02:06.700949+00:00",
+ "atnaujinta": "2026-10-06T19:07:11.561967+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -36,7 +36,7 @@
    "laikas": "2026-10-06 17:25:00+02:00",
    "sesija_data": "2026-10-06",
    "atr_pct": 2.2803186153818893,
-   "amzius_min": 480,
+   "amzius_min": 485,
    "dividendas": {
     "kita_ex": "2027-05-31",
     "suma": 1.35,
@@ -79,7 +79,7 @@
    "laikas": "2026-10-06 17:25:00+02:00",
    "sesija_data": "2026-10-06",
    "atr_pct": 1.979743402161895,
-   "amzius_min": 460,
+   "amzius_min": 465,
    "dividendas": {
     "kita_ex": "2027-05-03",
     "suma": 2.25,
@@ -125,7 +125,7 @@
    "laikas": "2026-10-06 17:25:00+02:00",
    "sesija_data": "2026-10-06",
    "atr_pct": 2.43835573488116,
-   "amzius_min": 513,
+   "amzius_min": 518,
    "dividendas": {
     "kita_ex": "2027-05-03",
     "suma": 0.15,
@@ -168,13 +168,46 @@
    "laikas": "2026-10-06 17:25:00+02:00",
    "sesija_data": "2026-10-06",
    "atr_pct": 2.315999348958333,
-   "amzius_min": 480,
+   "amzius_min": 485,
    "dividendas": {
     "kita_ex": "2027-05-14",
     "suma": 0.33,
     "dienu_iki": 222
    },
    "iki_ataskaitos": 28
+  },
+  {
+   "scenarijus": "Ralis",
+   "tipas": 2,
+   "ieina": 63.59000015258789,
+   "tikslas": null,
+   "stop": 62.390098571777344,
+   "R": null,
+   "L": 62.390098571777344,
+   "atr_abs": 1.8640007019042968,
+   "progresas": 0.8461538461538461,
+   "progresas_tikslus": false,
+   "tarpas_atr": 1.6309011645873437,
+   "virs_proverzio_atr": 0.03487049476031882,
+   "virsune_vertinimas": 65.4890007019043,
+   "sanaudos": 5.0,
+   "rizika_pct": 1.8869343889468684,
+   "rizika_eur": 339.6481900104363,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-10-06 11:40:00-04:00",
+   "rinkos_pokytis": 0.23942118848730987,
+   "platumas": 68.30985915492957,
+   "plat_d30": 0.7042253521126725,
+   "santykinis": 0.25031242451013513,
+   "rinka": "JAV",
+   "tickeris": "BWA",
+   "laikas": "2026-10-06 15:00:00-04:00",
+   "sesija_data": "2026-10-06",
+   "atr_pct": 3.093263779992868,
+   "amzius_min": 201,
+   "dividendas": null,
+   "iki_ataskaitos": 23
   }
  ]
 }
