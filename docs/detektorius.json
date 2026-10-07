@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-07T20:01:56.735484+00:00",
+ "atnaujinta": "2026-10-07T20:07:03.313489+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -38,7 +38,7 @@
    "laikas": "2026-10-07 17:25:00+02:00",
    "sesija_data": "2026-10-07",
    "atr_pct": 2.34774093484812,
-   "amzius_min": 245,
+   "amzius_min": 250,
    "dividendas": {
     "kita_ex": "2027-05-13",
     "suma": 0.187,
@@ -72,16 +72,16 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-10-07 10:15:00-04:00",
-   "rinkos_pokytis": -0.42704864292538725,
-   "platumas": 26.24113475177305,
-   "plat_d30": -5.673758865248228,
-   "santykinis": 7.353237360747345,
+   "rinkos_pokytis": -0.43280940166856574,
+   "platumas": 26.056338028169012,
+   "plat_d30": -5.633802816901412,
+   "santykinis": 7.358998119490523,
    "rinka": "JAV",
    "tickeris": "MU",
    "laikas": "2026-10-07 15:50:00-04:00",
    "sesija_data": "2026-10-07",
    "atr_pct": 4.033915676266878,
-   "amzius_min": 340,
+   "amzius_min": 346,
    "dividendas": null,
    "iki_ataskaitos": -7
   }
