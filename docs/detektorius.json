@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-07T14:02:20.484416+00:00",
+ "atnaujinta": "2026-10-07T14:07:12.061428+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -10,7 +10,7 @@
    "R": 35.987001991271974,
    "L": 34.81999969482422,
    "atr_abs": 0.8140003204345703,
-   "progresas": 0.43678241557798086,
+   "progresas": 0.4597692329615834,
    "progresas_tikslus": true,
    "kritimas_atr": 2.137593358117921,
    "atsiemimas_atr": 0.9336631904821935,
@@ -27,67 +27,22 @@
    "kliutys": [],
    "tinkamas": true,
    "pirmas_kartas": "2026-10-07 15:55:00+02:00",
-   "rinkos_pokytis": -0.2769235464242792,
+   "rinkos_pokytis": -0.24615948016827316,
    "platumas": 42.857142857142854,
    "plat_d30": 7.072829131652661,
-   "santykinis": 1.4701001368847777,
+   "santykinis": 1.4393360706287717,
    "rinka": "EU",
    "tickeris": "ELISA.HE",
    "laikas": "2026-10-07 15:55:00+02:00",
    "sesija_data": "2026-10-07",
    "atr_pct": 2.337737873546181,
-   "amzius_min": 0,
+   "amzius_min": 5,
    "dividendas": {
     "kita_ex": "2027-07-08",
     "suma": 0.6,
     "dienu_iki": 277
    },
    "iki_ataskaitos": 14
-  },
-  {
-   "scenarijus": "Atsistatymas",
-   "tipas": 1,
-   "ieina": 82.3499984741211,
-   "tikslas": 83.0999984741211,
-   "stop": 81.53249893188476,
-   "R": 83.0999984741211,
-   "L": 81.30000305175781,
-   "atr_abs": 1.6349990844726563,
-   "progresas": 0.5833322736925092,
-   "progresas_tikslus": true,
-   "kritimas_atr": 1.07033699077846,
-   "atsiemimas_atr": 0.6116211375876914,
-   "baru_nuo_dugno": 72,
-   "nesekmes": 0,
-   "silpnas_atsiemimas": false,
-   "R_pilnas": 83.0999984741211,
-   "tikslas_ribotas": false,
-   "kelias_atr": 0.4587158531907686,
-   "sanaudos": 10.0,
-   "rizika_pct": 0.9927134880193558,
-   "rizika_eur": 178.68842784348405,
-   "rr": 0.9174317063815307,
-   "kliutys": [
-    "R:R 0.917 < 1.0"
-   ],
-   "tinkamas": false,
-   "pirmas_kartas": "2026-10-07 15:55:00+02:00",
-   "rinkos_pokytis": -0.2769235464242792,
-   "platumas": 42.857142857142854,
-   "plat_d30": 7.072829131652661,
-   "santykinis": 1.381219897195951,
-   "rinka": "EU",
-   "tickeris": "ORNBV.HE",
-   "laikas": "2026-10-07 15:55:00+02:00",
-   "sesija_data": "2026-10-07",
-   "atr_pct": 2.009832962680115,
-   "amzius_min": 0,
-   "dividendas": {
-    "kita_ex": "2027-03-03",
-    "suma": 0.9,
-    "dienu_iki": 150
-   },
-   "iki_ataskaitos": 21
   }
  ]
 }
