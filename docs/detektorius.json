@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-12T17:07:10.530555+00:00",
+ "atnaujinta": "2026-10-12T17:12:12.692923+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -36,7 +36,7 @@
    "laikas": "2026-10-12 17:25:00+02:00",
    "sesija_data": "2026-10-12",
    "atr_pct": 2.548680718925982,
-   "amzius_min": 59,
+   "amzius_min": 64,
    "dividendas": {
     "kita_ex": "2027-04-07",
     "suma": 0.6,
@@ -79,52 +79,13 @@
    "laikas": "2026-10-12 17:25:00+02:00",
    "sesija_data": "2026-10-12",
    "atr_pct": 2.5635625669263242,
-   "amzius_min": 59,
+   "amzius_min": 64,
    "dividendas": {
     "kita_ex": "2027-05-17",
     "suma": 0.56,
     "dienu_iki": 217
    },
    "iki_ataskaitos": 24
-  },
-  {
-   "scenarijus": "Atsistatymas",
-   "tipas": 1,
-   "ieina": 92.36000061035156,
-   "tikslas": 93.50725059509277,
-   "stop": 91.21275062561035,
-   "R": 93.50725059509277,
-   "L": 90.70999908447266,
-   "atr_abs": 2.294499969482422,
-   "progresas": 0.25370414064078417,
-   "progresas_tikslus": true,
-   "kritimas_atr": 2.3360212166664946,
-   "atsiemimas_atr": 0.7016782008128489,
-   "baru_nuo_dugno": 40,
-   "nesekmes": 0,
-   "silpnas_atsiemimas": false,
-   "R_pilnas": 96.11000061035156,
-   "tikslas_ribotas": true,
-   "kelias_atr": 1.7476583959750578,
-   "sanaudos": 5.0,
-   "rizika_pct": 1.2421502567775278,
-   "rizika_eur": 223.587046219955,
-   "rr": 1.0,
-   "kliutys": [],
-   "tinkamas": true,
-   "pirmas_kartas": "2026-10-12 12:00:00-04:00",
-   "rinkos_pokytis": 0.4475163012132577,
-   "platumas": 67.14285714285714,
-   "plat_d30": -0.4627766599597578,
-   "santykinis": 0.8729113109163023,
-   "rinka": "JAV",
-   "tickeris": "SBUX",
-   "laikas": "2026-10-12 13:00:00-04:00",
-   "sesija_data": "2026-10-12",
-   "atr_pct": 2.528374622019198,
-   "amzius_min": 60,
-   "dividendas": null,
-   "iki_ataskaitos": 17
   }
  ]
 }
