@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-13T20:27:23.063389+00:00",
+ "atnaujinta": "2026-10-13T20:32:08.313983+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -36,7 +36,7 @@
    "laikas": "2026-10-13 17:25:00+02:00",
    "sesija_data": "2026-10-13",
    "atr_pct": 2.6603493573235903,
-   "amzius_min": 110,
+   "amzius_min": 115,
    "dividendas": {
     "kita_ex": "2027-05-03",
     "suma": 2.7,
@@ -73,7 +73,7 @@
    "laikas": "2026-10-13 17:25:00+02:00",
    "sesija_data": "2026-10-13",
    "atr_pct": 2.1117507213173665,
-   "amzius_min": 351,
+   "amzius_min": 356,
    "dividendas": {
     "kita_ex": "2027-02-17",
     "suma": 2.35,
