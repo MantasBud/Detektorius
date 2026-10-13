@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-13T16:02:13.648799+00:00",
+ "atnaujinta": "2026-10-13T16:07:11.229163+00:00",
  "signalai": [
   {
    "scenarijus": "Ralis",
@@ -30,7 +30,7 @@
    "laikas": "2026-10-13 17:25:00+02:00",
    "sesija_data": "2026-10-13",
    "atr_pct": 2.237012534624881,
-   "amzius_min": 86,
+   "amzius_min": 91,
    "dividendas": {
     "kita_ex": "2027-02-17",
     "suma": 2.35,
@@ -67,7 +67,7 @@
    "laikas": "2026-10-13 17:25:00+02:00",
    "sesija_data": "2026-10-13",
    "atr_pct": 1.8201755657048437,
-   "amzius_min": 20,
+   "amzius_min": 25,
    "dividendas": {
     "kita_ex": "2027-04-30",
     "suma": 1.9,
@@ -110,13 +110,52 @@
    "laikas": "2026-10-13 17:25:00+02:00",
    "sesija_data": "2026-10-13",
    "atr_pct": 2.8159446087926523,
-   "amzius_min": 45,
+   "amzius_min": 50,
    "dividendas": {
     "kita_ex": "2027-05-17",
     "suma": 1.08907,
     "dienu_iki": 217
    },
    "iki_ataskaitos": 31
+  },
+  {
+   "scenarijus": "Atsistatymas",
+   "tipas": 1,
+   "ieina": 101.56999969482422,
+   "tikslas": 104.65,
+   "stop": 98.48999938964843,
+   "R": 104.65,
+   "L": 98.2249984741211,
+   "atr_abs": 6.160000610351562,
+   "progresas": 0.2245720215661588,
+   "progresas_tikslus": true,
+   "kritimas_atr": 1.9107147899761656,
+   "atsiemimas_atr": 0.03571448034167794,
+   "baru_nuo_dugno": 29,
+   "nesekmes": 0,
+   "silpnas_atsiemimas": true,
+   "R_pilnas": 113.12000274658203,
+   "tikslas_ribotas": true,
+   "kelias_atr": 1.8750003096344876,
+   "sanaudos": 5.0,
+   "rizika_pct": 3.0323917637392066,
+   "rizika_eur": 545.8305174730572,
+   "rr": 1.0,
+   "kliutys": [],
+   "tinkamas": true,
+   "pirmas_kartas": "2026-10-13 12:00:00-04:00",
+   "rinkos_pokytis": -0.7502529327559015,
+   "platumas": 41.42857142857143,
+   "plat_d30": 1.9919517102615742,
+   "santykinis": 2.789632840959433,
+   "rinka": "JAV",
+   "tickeris": "INTC",
+   "laikas": "2026-10-13 12:00:00-04:00",
+   "sesija_data": "2026-10-13",
+   "atr_pct": 6.0779483996977755,
+   "amzius_min": 1,
+   "dividendas": null,
+   "iki_ataskaitos": 16
   }
  ]
 }
