@@ -1,5 +1,5 @@
 {
- "atnaujinta": "2026-10-14T20:42:29.283489+00:00",
+ "atnaujinta": "2026-10-14T20:47:26.671138+00:00",
  "signalai": [
   {
    "scenarijus": "Atsistatymas",
@@ -38,7 +38,7 @@
    "laikas": "2026-10-14 17:25:00+02:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.3448634790466207,
-   "amzius_min": 465,
+   "amzius_min": 470,
    "dividendas": {
     "kita_ex": "2027-05-13",
     "suma": 0.187,
@@ -81,7 +81,7 @@
    "laikas": "2026-10-14 17:25:00+02:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.682197365838422,
-   "amzius_min": 305,
+   "amzius_min": 310,
    "dividendas": {
     "kita_ex": "2027-03-31",
     "suma": 1.0,
@@ -124,7 +124,7 @@
    "laikas": "2026-10-14 17:25:00+02:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.2585317718594937,
-   "amzius_min": 285,
+   "amzius_min": 290,
    "dividendas": {
     "kita_ex": "2027-07-08",
     "suma": 0.6,
@@ -167,7 +167,7 @@
    "laikas": "2026-10-14 17:35:00+02:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.5960077794382452,
-   "amzius_min": 498,
+   "amzius_min": 503,
    "dividendas": {
     "kita_ex": "2027-05-03",
     "suma": 1.45,
@@ -210,7 +210,7 @@
    "laikas": "2026-10-14 15:55:00-04:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.7016051078037386,
-   "amzius_min": 381,
+   "amzius_min": 386,
    "dividendas": null,
    "iki_ataskaitos": 15
   },
@@ -249,7 +249,7 @@
    "laikas": "2026-10-14 15:55:00-04:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.2386480495651324,
-   "amzius_min": 376,
+   "amzius_min": 381,
    "dividendas": null,
    "iki_ataskaitos": -1
   },
@@ -288,7 +288,7 @@
    "laikas": "2026-10-14 15:55:00-04:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.4398216216681976,
-   "amzius_min": 316,
+   "amzius_min": 321,
    "dividendas": null,
    "iki_ataskaitos": 19
   },
@@ -327,7 +327,7 @@
    "laikas": "2026-10-14 15:55:00-04:00",
    "sesija_data": "2026-10-14",
    "atr_pct": 2.3922480284666947,
-   "amzius_min": 46,
+   "amzius_min": 51,
    "dividendas": null,
    "iki_ataskaitos": -1
   }
